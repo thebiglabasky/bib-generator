@@ -14,10 +14,27 @@ export default function PrintPage() {
     }
   }, []);
 
+  // Group bibs into pairs for printing 2 per A4 page
+  const bibPairs = [];
+  for (let i = 0; i < bibs.length; i += 2) {
+    bibPairs.push(bibs.slice(i, i + 2));
+  }
+
   return (
     <div>
-      {bibs.map((bib, idx) => (
-        <BibTemplate key={idx} bib={bib} />
+      {bibPairs.map((pair, pairIdx) => (
+        <div key={pairIdx} style={{
+          pageBreakAfter: 'always',
+          pageBreakInside: 'avoid',
+          width: '210mm',
+          height: '297mm',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {pair.map((bib, idx) => (
+            <BibTemplate key={pairIdx * 2 + idx} bib={bib} />
+          ))}
+        </div>
       ))}
 
       <style jsx global>{`

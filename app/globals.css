@@ -1,0 +1,8 @@
+* {
+  font-family: var(--font-ibm-plex-sans), sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}

@@ -27,4 +27,33 @@ export interface ParsedRow {
   [key: string]: string;
 }
 
+export interface TemplateElement {
+  id: string;
+  type: 'text' | 'image';
+  x: number; // percentage of container width
+  y: number; // percentage of container height
+  width?: number; // percentage of container width
+  height?: number; // percentage of container height
+  fontSize?: number;
+  fontWeight?: number;
+  fontFamily?: string;
+  color?: string;
+  textAlign?: 'left' | 'center' | 'right';
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  anchor?: 'left' | 'center' | 'right'; // horizontal anchor point for positioning
+  verticalAnchor?: 'top' | 'middle' | 'bottom'; // vertical anchor point for positioning
+  content?: string; // for text elements
+  src?: string; // for image elements
+  objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down'; // for image elements
+  preserveAspectRatio?: boolean; // for image elements - whether to maintain aspect ratio during resize
+}
+
+export interface BibTemplateConfig {
+  width: number; // in mm
+  height: number; // in mm
+  backgroundColor: string;
+  borderRadius: number;
+  elements: TemplateElement[];
+}
+
 

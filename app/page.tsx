@@ -2,6 +2,7 @@
 
 import { processCSVToBibs } from '@/lib/bib-processor';
 import { ColumnMapping, ParsedRow, RaceConfig } from '@/types';
+import { Calendar, Palette, Ruler, Target, User, Users } from 'lucide-react';
 import Papa from 'papaparse';
 import { useState } from 'react';
 
@@ -81,7 +82,32 @@ export default function Home() {
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '40px 20px' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', fontFamily: 'system-ui' }}>
         <div style={{ background: 'white', borderRadius: '16px', padding: '40px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-          <h1 style={{ fontSize: '42px', fontWeight: '900', marginBottom: '10px', color: '#1a202c', textAlign: 'center' }}>🏃 Générateur de Dossards</h1>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div></div>
+            <a
+              href="/template"
+              style={{
+                padding: '8px 16px',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#667eea',
+                textDecoration: 'none',
+                border: '2px solid #667eea',
+                borderRadius: '8px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Palette size={16} />
+              Designer de Dossard
+            </a>
+          </div>
+          <h1 style={{ fontSize: '42px', fontWeight: '900', marginBottom: '10px', color: '#1a202c', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+            <User size={40} />
+            Générateur de Dossards
+          </h1>
           <p style={{ textAlign: 'center', color: '#718096', marginBottom: '40px', fontSize: '16px' }}>Course Parents-Enfants</p>
 
           {/* Progress indicator */}
@@ -256,10 +282,22 @@ export default function Home() {
               borderBottom: '3px solid #e2e8f0',
               color: '#4a5568'
             }}>
-              <div>📏 Distance</div>
-              <div>📅 Année</div>
-              <div>🎨 Couleur</div>
-              <div>👨‍👩‍👧 Adulte?</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Ruler size={16} />
+                Distance
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Calendar size={16} />
+                Année
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Palette size={16} />
+                Couleur
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Users size={16} />
+                Adulte?
+              </div>
             </div>
             {raceConfigs.map((config, idx) => (
               <div key={config.id} style={{
@@ -384,10 +422,14 @@ export default function Home() {
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(34, 197, 94, 0.4)'
+                boxShadow: '0 4px 12px rgba(34, 197, 94, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
               }}
             >
-              🎯 Générer les dossards
+              <Target size={20} />
+              Générer les dossards
             </button>
           </div>
         </div>
