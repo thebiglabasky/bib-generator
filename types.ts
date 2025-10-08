@@ -29,7 +29,8 @@ export interface ParsedRow {
 
 export interface TemplateElement {
   id: string;
-  type: 'text' | 'image';
+  type: 'text' | 'image' | 'shape';
+  name?: string; // custom display name for the layer
   x: number; // percentage of container width
   y: number; // percentage of container height
   width?: number; // percentage of container width
@@ -46,6 +47,12 @@ export interface TemplateElement {
   src?: string; // for image elements
   objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down'; // for image elements
   preserveAspectRatio?: boolean; // for image elements - whether to maintain aspect ratio during resize
+  rotation?: number; // rotation angle in degrees, for image elements and shapes
+  shapeType?: 'square'; // for shape elements - starting with square
+  backgroundColor?: string; // for shape elements
+  borderWidth?: number; // for shape elements
+  borderColor?: string; // for shape elements
+  borderRadius?: number; // for shape elements - corner radius
 }
 
 export interface BibTemplateConfig {

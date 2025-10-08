@@ -113,8 +113,39 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
       transform,
     };
 
+    if (element.type === 'shape') {
+      const backgroundColor = element.backgroundColor || '#ffffff';
+      const borderWidth = element.borderWidth || 0;
+      const borderColor = element.borderColor || '#000000';
+      const borderRadius = element.borderRadius || 0;
+      const rotation = element.rotation || 0;
+
+      // Apply rotation transform
+      const transform = rotation !== 0 ? `rotate(${rotation}deg)` : undefined;
+
+      return (
+        <div
+          key={element.id}
+          style={{
+            ...style,
+            width: `${element.width}%`,
+            height: `${element.height}%`,
+            backgroundColor: backgroundColor,
+            border: borderWidth > 0 ? `${borderWidth}px solid ${borderColor}` : 'none',
+            borderRadius: `${borderRadius}px`,
+            transform: transform,
+            transformOrigin: 'center center'
+          }}
+        />
+      );
+    }
+
     if (element.type === 'image') {
       const objectFit = element.objectFit || 'contain';
+      const rotation = element.rotation || 0;
+
+      // Apply rotation transform
+      const transform = rotation !== 0 ? `rotate(${rotation}deg)` : undefined;
 
       return (
         <img
@@ -125,7 +156,9 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
             ...style,
             width: `${element.width}%`,
             height: `${element.height}%`,
-            objectFit: objectFit
+            objectFit: objectFit,
+            transform: transform,
+            transformOrigin: 'center center'
           }}
         />
       );
