@@ -3,22 +3,22 @@
 import { AVAILABLE_FONTS, loadFont } from '@/lib/font-loader';
 import { TemplateElement } from '@/types';
 import {
-  AlignCenter,
-  AlignLeft,
-  AlignRight,
-  ArrowDown,
-  ArrowDownToLine,
-  ArrowUp,
-  ArrowUpToLine,
-  ChevronsDownUp,
-  Image,
-  Maximize,
-  Minimize,
-  Move,
-  Plus,
-  Settings,
-  Square,
-  Type
+    AlignCenter,
+    AlignLeft,
+    AlignRight,
+    ArrowDown,
+    ArrowDownToLine,
+    ArrowUp,
+    ArrowUpToLine,
+    ChevronsDownUp,
+    Image,
+    Maximize,
+    Minimize,
+    Move,
+    Plus,
+    Settings,
+    Square,
+    Type
 } from 'lucide-react';
 import React from 'react';
 import ColorInput from '../ColorInput';
@@ -400,7 +400,42 @@ export default function ToolsPanel({
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>X</label>
+                      <input
+                        type="number"
+                        value={parseFloat((selectedElement.x || 0).toString()).toFixed(2)}
+                        onChange={(e) => onUpdateElement({ x: parseFloat(e.target.value) })}
+                        step="0.5"
+                        style={{
+                          width: '60px',
+                          padding: '4px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '3px',
+                          fontSize: '11px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Y</label>
+                      <input
+                        type="number"
+                        value={parseFloat((selectedElement.y || 0).toString()).toFixed(2)}
+                        onChange={(e) => onUpdateElement({ y: parseFloat(e.target.value) })}
+                        step="0.5"
+                        style={{
+                          width: '60px',
+                          padding: '4px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '3px',
+                          fontSize: '11px'
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Largeur</label>
                       <input
@@ -434,11 +469,64 @@ export default function ToolsPanel({
                       />
                     </div>
                   </div>
+                </div>
               </div>
             )}
 
             {selectedElement.type === 'image' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>X</label>
+                    <input
+                      type="number"
+                      value={parseFloat((selectedElement.x || 0).toString()).toFixed(2)}
+                      onChange={(e) => onUpdateElement({ x: parseFloat(e.target.value) })}
+                      step="0.5"
+                      style={{
+                        width: '50px',
+                        padding: '4px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '3px',
+                        fontSize: '11px'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Y</label>
+                    <input
+                      type="number"
+                      value={parseFloat((selectedElement.y || 0).toString()).toFixed(2)}
+                      onChange={(e) => onUpdateElement({ y: parseFloat(e.target.value) })}
+                      step="0.5"
+                      style={{
+                        width: '50px',
+                        padding: '4px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '3px',
+                        fontSize: '11px'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Rotation</label>
+                    <input
+                      type="number"
+                      value={parseFloat((selectedElement.rotation || 0).toString()).toFixed(1)}
+                      onChange={(e) => onUpdateElement({ rotation: parseFloat(e.target.value) })}
+                      step="1"
+                      min="-360"
+                      max="360"
+                      style={{
+                        width: '50px',
+                        padding: '4px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '3px',
+                        fontSize: '11px'
+                      }}
+                    />
+                  </div>
+                </div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Largeur</label>
@@ -463,24 +551,6 @@ export default function ToolsPanel({
                       value={parseFloat((selectedElement.height || 20).toString()).toFixed(2)}
                       onChange={(e) => onUpdateElement({ height: parseFloat(e.target.value) })}
                       step="1"
-                      style={{
-                        width: '50px',
-                        padding: '4px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '3px',
-                        fontSize: '11px'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Rotation</label>
-                    <input
-                      type="number"
-                      value={parseFloat((selectedElement.rotation || 0).toString()).toFixed(1)}
-                      onChange={(e) => onUpdateElement({ rotation: parseFloat(e.target.value) })}
-                      step="1"
-                      min="-360"
-                      max="360"
                       style={{
                         width: '50px',
                         padding: '4px',
@@ -543,6 +613,58 @@ export default function ToolsPanel({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <div>
+                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>X</label>
+                    <input
+                      type="number"
+                      value={parseFloat((selectedElement.x || 0).toString()).toFixed(2)}
+                      onChange={(e) => onUpdateElement({ x: parseFloat(e.target.value) })}
+                      step="0.5"
+                      style={{
+                        width: '50px',
+                        padding: '4px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '3px',
+                        fontSize: '11px'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Y</label>
+                    <input
+                      type="number"
+                      value={parseFloat((selectedElement.y || 0).toString()).toFixed(2)}
+                      onChange={(e) => onUpdateElement({ y: parseFloat(e.target.value) })}
+                      step="0.5"
+                      style={{
+                        width: '50px',
+                        padding: '4px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '3px',
+                        fontSize: '11px'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Rotation</label>
+                    <input
+                      type="number"
+                      value={parseFloat((selectedElement.rotation || 0).toString()).toFixed(1)}
+                      onChange={(e) => onUpdateElement({ rotation: parseFloat(e.target.value) })}
+                      step="1"
+                      min="-360"
+                      max="360"
+                      style={{
+                        width: '50px',
+                        padding: '4px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '3px',
+                        fontSize: '11px'
+                      }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <div>
                     <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Largeur</label>
                     <input
                       type="number"
@@ -565,24 +687,6 @@ export default function ToolsPanel({
                       value={parseFloat((selectedElement.height || 20).toString()).toFixed(2)}
                       onChange={(e) => onUpdateElement({ height: parseFloat(e.target.value) })}
                       step="1"
-                      style={{
-                        width: '50px',
-                        padding: '4px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '3px',
-                        fontSize: '11px'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Rotation</label>
-                    <input
-                      type="number"
-                      value={parseFloat((selectedElement.rotation || 0).toString()).toFixed(1)}
-                      onChange={(e) => onUpdateElement({ rotation: parseFloat(e.target.value) })}
-                      step="1"
-                      min="-360"
-                      max="360"
                       style={{
                         width: '50px',
                         padding: '4px',

@@ -859,7 +859,7 @@ export default function BibTemplateDesigner() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {/* Import/Export Controls */}
         <div style={{ display: 'flex', gap: '10px', padding: '15px', background: '#f7fafc', borderRadius: '12px', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: '10px' }}>
@@ -880,7 +880,7 @@ export default function BibTemplateDesigner() {
               }}
             >
               <Download size={18} />
-              Exporter le template
+              Exporter
             </button>
             <button
               onClick={triggerFileInput}
@@ -899,7 +899,7 @@ export default function BibTemplateDesigner() {
               }}
             >
               <Upload size={18} />
-              Importer un template
+              Importer
             </button>
             <button
               onClick={() => setShowPreview(!showPreview)}
@@ -918,7 +918,7 @@ export default function BibTemplateDesigner() {
               }}
             >
               {showPreview ? <EyeOff size={18} /> : <Eye size={18} />}
-              {showPreview ? 'Masquer prévisualisation' : 'Prévisualisation'}
+              {showPreview ? 'Masquer la prévisualisation' : 'Prévisualiser'}
             </button>
             <input
               ref={fileInputRef}
