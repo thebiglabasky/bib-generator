@@ -1,3 +1,4 @@
+import { extractFontFamilies, loadFonts } from '@/lib/font-loader';
 import { BibData, BibTemplateConfig, TemplateElement } from '@/types';
 import { useEffect, useState } from 'react';
 
@@ -60,13 +61,55 @@ const DEFAULT_TEMPLATE: BibTemplateConfig = {
   ]
 };
 
+function getVariableValue(variable: string, bib: BibData): string {
+  switch (variable) {
+    case 'bib.number':
+      return bib.bibNumber.toString().padStart(3, '0');
+    case 'participant.firstName':
+      return bib.firstName;
+    case 'participant.lastName':
+      return bib.lastName;
+    case 'race.label':
+    case 'race.distance':
+      return bib.raceConfig.label;
+    case 'race.color':
+      return bib.raceConfig.color;
+    case 'race.id':
+      return bib.raceConfig.id;
+    default:
+      return '';
+  }
+}
+
 function replaceTemplateVariables(content: string, bib: BibData): string {
   return content
     .replace('{bib.number}', bib.bibNumber.toString().padStart(3, '0'))
     .replace('{participant.firstName}', bib.firstName)
     .replace('{participant.lastName}', bib.lastName)
     .replace('{race.distance}', bib.raceConfig.label)
-    .replace('{race.color}', bib.raceConfig.color);
+    .replace('{race.label}', bib.raceConfig.label)
+    .replace('{race.color}', bib.raceConfig.color)
+    .replace('{race.id}', bib.raceConfig.id);
+}
+
+function resolveColorValue(color: string | undefined, bib: BibData, defaultColor: string): string {
+  if (!color) return defaultColor;
+
+  // Check if color contains a variable reference
+  if (color.includes('{') && color.includes('}')) {
+    return replaceTemplateVariables(color, bib);
+  }
+
+  return color;
+}
+
+function shouldDisplayElement(element: TemplateElement, bib: BibData): boolean {
+  if (!element.condition) {
+    return true; // No condition, always display
+  }
+
+  const actualValue = getVariableValue(element.condition.variable, bib);
+  return actualValue === element.condition.value;
 }
 
 export default function BibTemplate({ bib }: BibTemplateProps) {
@@ -76,10 +119,18 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
     const savedTemplate = localStorage.getItem('bibTemplate');
     if (savedTemplate) {
       try {
-        setTemplate(JSON.parse(savedTemplate));
+        const parsed = JSON.parse(savedTemplate);
+        setTemplate(parsed);
+        // Load fonts used in the template
+        const fonts = extractFontFamilies(parsed.elements);
+        loadFonts(fonts);
       } catch (error) {
         console.error('Error loading template:', error);
       }
+    } else {
+      // Load fonts from default template
+      const fonts = extractFontFamilies(DEFAULT_TEMPLATE.elements);
+      loadFonts(fonts);
     }
   }, []);
 
@@ -114,14 +165,29 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
     };
 
     if (element.type === 'shape') {
-      const backgroundColor = element.backgroundColor || '#ffffff';
+      const backgroundColor = resolveColorValue(element.backgroundColor, bib, '#ffffff');
       const borderWidth = element.borderWidth || 0;
-      const borderColor = element.borderColor || '#000000';
+      const borderColor = resolveColorValue(element.borderColor, bib, '#000000');
       const borderRadius = element.borderRadius || 0;
       const rotation = element.rotation || 0;
 
       // Apply rotation transform
       const transform = rotation !== 0 ? `rotate(${rotation}deg)` : undefined;
+
+      // Add pattern for shapes with variable-based colors
+      const hasVariableColor = element.backgroundColor && element.backgroundColor.includes('{') && element.backgroundColor.includes('}');
+      const backgroundStyle = hasVariableColor
+        ? {
+            backgroundColor: backgroundColor,
+            backgroundImage: `repeating-linear-gradient(
+              45deg,
+              rgba(0, 0, 0, 0.1) 0px,
+              rgba(0, 0, 0, 0.1) 2px,
+              transparent 2px,
+              transparent 8px
+            )`
+          }
+        : { backgroundColor: backgroundColor };
 
       return (
         <div
@@ -130,7 +196,7 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
             ...style,
             width: `${element.width}%`,
             height: `${element.height}%`,
-            backgroundColor: backgroundColor,
+            ...backgroundStyle,
             border: borderWidth > 0 ? `${borderWidth}px solid ${borderColor}` : 'none',
             borderRadius: `${borderRadius}px`,
             transform: transform,
@@ -172,7 +238,7 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
           fontSize: `${element.fontSize}px`,
           fontWeight: element.fontWeight,
           fontFamily: element.fontFamily,
-          color: element.color,
+          color: resolveColorValue(element.color, bib, '#000000'),
           textAlign: textAlign,
           textTransform: element.textTransform,
           whiteSpace: 'pre-wrap',
@@ -193,7 +259,7 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
         pageBreakInside: 'avoid',
         padding: '20mm',
         boxSizing: 'border-box',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'white',
         position: 'relative',
         display: 'flex',
         alignItems: 'center',
@@ -206,12 +272,12 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
           width: '100%',
           height: '100%',
           borderRadius: `${template.borderRadius}px`,
-          boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+          border: '1px solid #e5e7eb',
           position: 'relative',
           overflow: 'hidden'
         }}
       >
-        {template.elements.map(renderElement)}
+        {template.elements.filter(el => shouldDisplayElement(el, bib)).map(renderElement)}
       </div>
     </div>
   );

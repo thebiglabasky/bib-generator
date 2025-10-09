@@ -1,10 +1,12 @@
 'use client';
 
+import { extractFontFamilies, loadFont, loadFonts } from '@/lib/font-loader';
 import { BibTemplateConfig, TemplateElement } from '@/types';
-import { Download, Image, Square, Type, Upload } from 'lucide-react';
+import { Download, Eye, EyeOff, Image, Square, Type, Upload } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Canvas from './designer/Canvas';
 import LayersPanel from './designer/LayersPanel';
+import PreviewPanel from './designer/PreviewPanel';
 import ToolsPanel from './designer/ToolsPanel';
 
 const DEFAULT_TEMPLATE: BibTemplateConfig = {
@@ -109,6 +111,7 @@ export default function BibTemplateDesigner() {
   const [resizingElement, setResizingElement] = useState<ResizeState | null>(null);
   const [rotatingElement, setRotatingElement] = useState<RotationState | null>(null);
   const [isRotationMode, setIsRotationMode] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -625,8 +628,13 @@ export default function BibTemplateDesigner() {
     }
   };
 
-  const updateElement = useCallback((updates: Partial<TemplateElement>) => {
+  const updateElement = useCallback(async (updates: Partial<TemplateElement>) => {
     if (!selectedElement) return;
+
+    // If font is being updated, load it first
+    if ('fontFamily' in updates && updates.fontFamily) {
+      await loadFont(updates.fontFamily);
+    }
 
     setTemplate(prev => ({
       ...prev,
@@ -664,12 +672,23 @@ export default function BibTemplateDesigner() {
     try {
       const savedTemplate = localStorage.getItem(LOCALSTORAGE_KEY);
       if (savedTemplate) {
-        setTemplate(JSON.parse(savedTemplate));
+        const parsed = JSON.parse(savedTemplate);
+        setTemplate(parsed);
+        // Load fonts used in the template
+        const fonts = extractFontFamilies(parsed.elements);
+        loadFonts(fonts);
+      } else {
+        // Load fonts from default template
+        const fonts = extractFontFamilies(DEFAULT_TEMPLATE.elements);
+        loadFonts(fonts);
       }
       // If no saved template, keep DEFAULT_TEMPLATE that was already set
     } catch (e) {
       console.error('Failed to load template from localStorage:', e);
       // Keep DEFAULT_TEMPLATE on error
+      // Still load fonts from default template
+      const fonts = extractFontFamilies(DEFAULT_TEMPLATE.elements);
+      loadFonts(fonts);
     } finally {
       setIsLoaded(true);
     }
@@ -714,6 +733,9 @@ export default function BibTemplateDesigner() {
         // Save immediately to localStorage
         localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(parsed));
         setSelectedElement(null);
+        // Load fonts used in the imported template
+        const fonts = extractFontFamilies(parsed.elements);
+        loadFonts(fonts);
       } catch (error) {
         console.error('Failed to import template:', error);
         alert('Erreur lors de l\'importation du template. Vérifiez le format du fichier.');
@@ -778,6 +800,25 @@ export default function BibTemplateDesigner() {
             <Upload size={18} />
             Importer un template
           </button>
+          <button
+            onClick={() => setShowPreview(!showPreview)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 16px',
+              background: showPreview ? '#f59e0b' : 'white',
+              color: showPreview ? 'white' : '#4a5568',
+              border: showPreview ? 'none' : '1px solid #e2e8f0',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            {showPreview ? <EyeOff size={18} /> : <Eye size={18} />}
+            {showPreview ? 'Masquer prévisualisation' : 'Prévisualisation'}
+          </button>
           <input
             ref={fileInputRef}
             type="file"
@@ -786,6 +827,9 @@ export default function BibTemplateDesigner() {
             style={{ display: 'none' }}
           />
         </div>
+
+        {/* Preview Panel */}
+        <PreviewPanel template={template} isVisible={showPreview} />
 
         {/* Designer Panels */}
         <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>

@@ -33,6 +33,21 @@ export default function ShapeElement({
   const rotation = element.rotation || 0;
   const transform = rotation !== 0 ? `rotate(${rotation}deg)` : 'none';
 
+  // Add pattern for shapes with variable-based colors
+  const hasVariableColor = element.backgroundColor && element.backgroundColor.includes('{') && element.backgroundColor.includes('}');
+  const backgroundStyle = hasVariableColor
+    ? {
+        backgroundColor: '#f0f0f0', // Light gray background
+        backgroundImage: `repeating-linear-gradient(
+          45deg,
+          rgba(0, 0, 0, 0.2) 0px,
+          rgba(0, 0, 0, 0.2) 4px,
+          rgba(0, 0, 0, 0.1) 4px,
+          rgba(0, 0, 0, 0.1) 8px
+        )`
+      }
+    : { backgroundColor: backgroundColor };
+
   return (
     <div
       key={element.id}
@@ -42,7 +57,7 @@ export default function ShapeElement({
         top: `${element.y}%`,
         width: `${element.width}%`,
         height: `${element.height}%`,
-        backgroundColor: backgroundColor,
+        ...backgroundStyle,
         border: borderWidth > 0 ? `${borderWidth}px solid ${borderColor}` : 'none',
         outline: isSelected ? '2px solid #667eea' : 'none',
         outlineOffset: isSelected ? '2px' : '0',

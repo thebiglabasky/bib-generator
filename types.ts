@@ -27,12 +27,19 @@ export interface ParsedRow {
   [key: string]: string;
 }
 
+// Condition for conditional display of elements
+export interface DisplayCondition {
+  variable: string; // e.g., "race.label" or "race.color"
+  value: string; // value to match
+}
+
 // Base properties shared by all element types
 interface BaseTemplateElement {
   id: string;
   name?: string; // custom display name for the layer
   x: number; // percentage of container width
   y: number; // percentage of container height
+  condition?: DisplayCondition; // optional condition for displaying this element
 }
 
 // Text element specific properties

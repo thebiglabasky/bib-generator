@@ -1,5 +1,6 @@
 'use client';
 
+import { AVAILABLE_FONTS, loadFont } from '@/lib/font-loader';
 import { TemplateElement } from '@/types';
 import {
   AlignCenter,
@@ -20,24 +21,8 @@ import {
   Type
 } from 'lucide-react';
 import React from 'react';
-
-const AVAILABLE_FONTS = [
-  { name: 'Arial', family: 'Arial, sans-serif', googleFont: null },
-  { name: 'Helvetica', family: 'Helvetica, sans-serif', googleFont: null },
-  { name: 'Roboto', family: '"Roboto", sans-serif', googleFont: 'Roboto:400,700' },
-  { name: 'Open Sans', family: '"Open Sans", sans-serif', googleFont: 'Open+Sans:400,700' },
-  { name: 'Lato', family: '"Lato", sans-serif', googleFont: 'Lato:400,700' },
-  { name: 'Montserrat', family: '"Montserrat", sans-serif', googleFont: 'Montserrat:400,700' },
-  { name: 'Nunito', family: '"Nunito", sans-serif', googleFont: 'Nunito:400,700' },
-  { name: 'Poppins', family: '"Poppins", sans-serif', googleFont: 'Poppins:400,700' },
-  { name: 'Inter', family: '"Inter", sans-serif', googleFont: 'Inter:400,700' },
-  { name: 'Times New Roman', family: '"Times New Roman", serif', googleFont: null },
-  { name: 'Georgia', family: 'Georgia, serif', googleFont: null },
-  { name: 'Merriweather', family: '"Merriweather", serif', googleFont: 'Merriweather:400,700' },
-  { name: 'Playfair Display', family: '"Playfair Display", serif', googleFont: 'Playfair+Display:400,700' },
-  { name: 'Oswald', family: '"Oswald", sans-serif', googleFont: 'Oswald:400,700' },
-  { name: 'Bebas Neue', family: '"Bebas Neue", sans-serif', googleFont: 'Bebas+Neue' },
-];
+import ColorInput from '../ColorInput';
+import VariableAutocomplete from '../VariableAutocomplete';
 
 interface ToolsPanelProps {
   selectedElement: TemplateElement | null;
@@ -219,10 +204,9 @@ export default function ToolsPanel({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>Texte</label>
-                  <input
-                    type="text"
+                  <VariableAutocomplete
                     value={selectedElement.content || ''}
-                    onChange={(e) => onUpdateElement({ content: e.target.value })}
+                    onChange={(value) => onUpdateElement({ content: value })}
                     style={{
                       width: '100%',
                       padding: '6px',
@@ -239,7 +223,11 @@ export default function ToolsPanel({
                     <div style={{ position: 'relative' }}>
                       <select
                         value={selectedElement.fontFamily || 'Arial, sans-serif'}
-                        onChange={(e) => onUpdateElement({ fontFamily: e.target.value })}
+                        onChange={async (e) => {
+                          const newFont = e.target.value;
+                          await loadFont(newFont);
+                          onUpdateElement({ fontFamily: newFont });
+                        }}
                         style={{
                           width: '100%',
                           padding: '6px',
@@ -261,9 +249,9 @@ export default function ToolsPanel({
                       </select>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'end' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Taille</label>
+                        <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px', height: '16px', lineHeight: '16px' }}>Taille</label>
                         <input
                           type="number"
                           value={selectedElement.fontSize || 24}
@@ -273,23 +261,17 @@ export default function ToolsPanel({
                             padding: '4px',
                             border: '1px solid #e2e8f0',
                             borderRadius: '3px',
-                            fontSize: '11px'
+                            fontSize: '11px',
+                            height: '24px',
+                            boxSizing: 'border-box'
                           }}
                         />
                       </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Couleur</label>
-                        <input
-                          type="color"
-                          value={selectedElement.color || '#000000'}
-                          onChange={(e) => onUpdateElement({ color: e.target.value })}
-                          style={{
-                            width: '60px',
-                            height: '28px',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '3px',
-                            cursor: 'pointer'
-                          }}
+                      <div style={{ flex: 1 }}>
+                        <ColorInput
+                          label="Couleur"
+                          value={selectedElement.color}
+                          onChange={(value) => onUpdateElement({ color: value })}
                         />
                       </div>
                     </div>
@@ -516,36 +498,18 @@ export default function ToolsPanel({
                   </div>
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', marginBottom: '4px' }}>Fond</label>
-                  <input
-                    type="color"
-                    value={selectedElement.backgroundColor || '#ffffff'}
-                    onChange={(e) => onUpdateElement({ backgroundColor: e.target.value })}
-                    style={{
-                      width: '100%',
-                      height: '32px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                  />
-                </div>
+                <ColorInput
+                  label="Fond"
+                  value={selectedElement.backgroundColor}
+                  onChange={(value) => onUpdateElement({ backgroundColor: value })}
+                />
 
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'end' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Bordure</label>
-                    <input
-                      type="color"
-                      value={selectedElement.borderColor || '#000000'}
-                      onChange={(e) => onUpdateElement({ borderColor: e.target.value })}
-                      style={{
-                        width: '100%',
-                        height: '28px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '3px',
-                        cursor: 'pointer'
-                      }}
+                    <ColorInput
+                      label="Bordure"
+                      value={selectedElement.borderColor}
+                      onChange={(value) => onUpdateElement({ borderColor: value })}
                     />
                   </div>
                   <div style={{ flex: 1 }}>
@@ -600,14 +564,113 @@ export default function ToolsPanel({
           </div>
         )}
 
+        {selectedElement && (
+          <div style={{ marginBottom: '20px' }}>
+            <h4 style={{ marginBottom: '10px', fontSize: '14px', fontWeight: '600' }}>
+              Affichage conditionnel
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!selectedElement.condition}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        onUpdateElement({
+                          condition: {
+                            variable: 'race.label',
+                            value: ''
+                          }
+                        });
+                      } else {
+                        onUpdateElement({ condition: undefined });
+                      }
+                    }}
+                    style={{ marginRight: '6px' }}
+                  />
+                  Activer la condition
+                </label>
+              </div>
+
+              {selectedElement.condition && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>Variable</label>
+                    <select
+                      value={selectedElement.condition.variable}
+                      onChange={(e) => onUpdateElement({
+                        condition: {
+                          ...selectedElement.condition!,
+                          variable: e.target.value
+                        }
+                      })}
+                      style={{
+                        width: '100%',
+                        padding: '6px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        background: 'white'
+                      }}
+                    >
+                      <option value="race.label">race.label</option>
+                      <option value="race.distance">race.distance</option>
+                      <option value="race.color">race.color</option>
+                      <option value="race.id">race.id</option>
+                      <option value="participant.firstName">participant.firstName</option>
+                      <option value="participant.lastName">participant.lastName</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>Valeur attendue</label>
+                    <input
+                      type="text"
+                      value={selectedElement.condition.value}
+                      onChange={(e) => onUpdateElement({
+                        condition: {
+                          ...selectedElement.condition!,
+                          value: e.target.value
+                        }
+                      })}
+                      placeholder="ex: 2020"
+                      style={{
+                        width: '100%',
+                        padding: '6px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '4px',
+                        fontSize: '12px'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{
+                    fontSize: '11px',
+                    color: '#718096',
+                    background: '#f7fafc',
+                    padding: '8px',
+                    borderRadius: '4px'
+                  }}>
+                    L'élément ne s'affichera que si la variable correspond exactement à la valeur attendue.
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         <div>
           <h4 style={{ marginBottom: '10px', fontSize: '14px', fontWeight: '600' }}>Variables disponibles</h4>
-          <div style={{ fontSize: '12px', color: '#718096', lineHeight: '1.4' }}>
+          <div style={{ fontSize: '12px', color: '#718096', lineHeight: '1.6' }}>
             <div><code>{'{bib.number}'}</code> - Numéro du dossard</div>
             <div><code>{'{participant.firstName}'}</code> - Prénom</div>
             <div><code>{'{participant.lastName}'}</code> - Nom</div>
             <div><code>{'{race.distance}'}</code> - Distance</div>
             <div><code>{'{race.color}'}</code> - Couleur de la course</div>
+            <div style={{ marginTop: '8px', fontSize: '11px', fontStyle: 'italic' }}>
+              Les variables peuvent être utilisées dans les textes et les couleurs
+            </div>
           </div>
         </div>
       </div>

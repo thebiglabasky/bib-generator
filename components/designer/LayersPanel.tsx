@@ -2,23 +2,23 @@
 
 import { BibTemplateConfig, TemplateElement } from '@/types';
 import {
-    closestCenter,
-    DndContext,
-    DragEndEvent,
-    KeyboardSensor,
-    PointerSensor,
-    useSensor,
-    useSensors,
+  closestCenter,
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
 } from '@dnd-kit/core';
 import {
-    arrayMove,
-    SortableContext,
-    sortableKeyboardCoordinates,
-    useSortable,
-    verticalListSortingStrategy,
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Layers, Trash2 } from 'lucide-react';
+import { Eye, GripVertical, Layers, Trash2 } from 'lucide-react';
 import React from 'react';
 
 interface SortableItemProps {
@@ -146,9 +146,25 @@ function SortableItem({ element, isSelected, onSelect, onDelete, onUpdateName, g
             }}
           />
         ) : (
-          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {getElementDisplayName(element)}
-          </span>
+          <>
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {getElementDisplayName(element)}
+            </span>
+            {element.condition && (
+              <div
+                style={{
+                  color: '#667eea',
+                  display: 'flex',
+                  alignItems: 'center',
+                  fontSize: '10px',
+                  marginLeft: '4px'
+                }}
+                title={`Condition: ${element.condition.variable} = ${element.condition.value}`}
+              >
+                <Eye size={12} />
+              </div>
+            )}
+          </>
         )}
         {!isEditing && (
           <button
