@@ -37,7 +37,7 @@
     {
       "id": "bib-number",
       "type": "text",
-      "x": 17.11592193953602,
+      "x": 17.764430370145625,
       "y": 32.14347553236483,
       "fontSize": 120,
       "fontWeight": 900,
@@ -53,10 +53,10 @@
     {
       "id": "first-name",
       "type": "text",
-      "x": 7.60194611640887,
-      "y": 63.10165871504474,
+      "x": 7.212841058043104,
+      "y": 58.72382756808035,
       "fontSize": 53,
-      "fontWeight": 600,
+      "fontWeight": 700,
       "fontFamily": "\"Montserrat\", sans-serif",
       "color": "#4a5568",
       "textAlign": "center",
@@ -64,7 +64,8 @@
       "verticalAnchor": "bottom",
       "content": "{participant.firstName}",
       "width": 85.57431788391379,
-      "height": 14.698298236289567
+      "height": 14.698298236289567,
+      "textTransform": "none"
     },
     {
       "id": "image-1760028484194",
@@ -108,6 +109,22 @@
       "anchor": "right",
       "verticalAnchor": "middle",
       "content": "2025"
+    },
+    {
+      "id": "text-1760045683823",
+      "type": "text",
+      "x": 4.260700389105061,
+      "y": 70.7948181543973,
+      "width": 91.47859922178988,
+      "height": 17.687028140013727,
+      "fontSize": 57,
+      "fontWeight": 700,
+      "fontFamily": "\"Montserrat\", sans-serif",
+      "color": "#1d232f",
+      "textAlign": "center",
+      "anchor": "center",
+      "verticalAnchor": "top",
+      "content": "{participant.lastName}"
     }
   ]
 }
