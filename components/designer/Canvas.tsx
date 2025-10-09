@@ -77,7 +77,9 @@ export default function Canvas({
         element={element}
         isSelected={isSelected}
         isDragging={isDragging}
+        isResizing={isResizing}
         onMouseDown={onMouseDown}
+        onResizeStart={onResizeStart}
       />
     );
   };

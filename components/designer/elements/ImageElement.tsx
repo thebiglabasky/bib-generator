@@ -1,18 +1,18 @@
 'use client';
 
-import { TemplateElement } from '@/types';
+import { ImageElement as ImageElementType } from '@/types';
 import React from 'react';
 
 interface ImageElementProps {
-  element: TemplateElement;
+  element: ImageElementType;
   isSelected: boolean;
   isDragging: boolean;
   isResizing: boolean;
   isRotating: boolean;
   isRotationMode: boolean;
-  onMouseDown: (e: React.MouseEvent, element: TemplateElement) => void;
-  onResizeStart: (e: React.MouseEvent, element: TemplateElement, corner: 'nw' | 'ne' | 'sw' | 'se') => void;
-  onRotationStart: (e: React.MouseEvent, element: TemplateElement) => void;
+  onMouseDown: (e: React.MouseEvent, element: ImageElementType) => void;
+  onResizeStart: (e: React.MouseEvent, element: ImageElementType, corner: 'nw' | 'ne' | 'sw' | 'se') => void;
+  onRotationStart: (e: React.MouseEvent, element: ImageElementType) => void;
 }
 
 export default function ImageElement({

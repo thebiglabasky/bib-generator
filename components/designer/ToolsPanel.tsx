@@ -26,6 +26,7 @@ import VariableAutocomplete from '../VariableAutocomplete';
 
 interface ToolsPanelProps {
   selectedElement: TemplateElement | null;
+  canvasRef: React.RefObject<HTMLDivElement>;
   onAddTextElement: () => void;
   onAddShapeElement: () => void;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -38,6 +39,7 @@ interface ToolsPanelProps {
 
 export default function ToolsPanel({
   selectedElement,
+  canvasRef,
   onAddTextElement,
   onAddShapeElement,
   onImageUpload,
@@ -191,6 +193,65 @@ export default function ToolsPanel({
                 <ArrowDownToLine size={14} />
               </button>
             </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+              <button
+                onClick={() => {
+                  const width = selectedElement.type === 'text'
+                    ? (selectedElement.width || 30)
+                    : (selectedElement.width || 20);
+                  const newX = Math.max(0, Math.min(100 - width, 50 - width / 2));
+                  onUpdateElement({ x: newX });
+                }}
+                title="Centrer horizontalement"
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  background: '#f7fafc',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: '#4a5568'
+                }}
+              >
+                <AlignCenter size={14} />
+                H
+              </button>
+              <button
+                onClick={() => {
+                  const height = selectedElement.type === 'text'
+                    ? (selectedElement.height || 10)
+                    : (selectedElement.height || 20);
+                  const newY = Math.max(0, Math.min(100 - height, 50 - height / 2));
+                  onUpdateElement({ y: newY });
+                }}
+                title="Centrer verticalement"
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  background: '#f7fafc',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: '#4a5568'
+                }}
+              >
+                <ChevronsDownUp size={14} />
+                V
+              </button>
+            </div>
           </div>
         )}
 
@@ -338,6 +399,41 @@ export default function ToolsPanel({
                     </div>
                   </div>
                 </div>
+
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Largeur</label>
+                      <input
+                        type="number"
+                        value={parseFloat((selectedElement.width || 30).toString()).toFixed(2)}
+                        onChange={(e) => onUpdateElement({ width: parseFloat(e.target.value) })}
+                        step="1"
+                        style={{
+                          width: '60px',
+                          padding: '4px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '3px',
+                          fontSize: '11px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Hauteur</label>
+                      <input
+                        type="number"
+                        value={parseFloat((selectedElement.height || 10).toString()).toFixed(2)}
+                        onChange={(e) => onUpdateElement({ height: parseFloat(e.target.value) })}
+                        step="1"
+                        style={{
+                          width: '60px',
+                          padding: '4px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '3px',
+                          fontSize: '11px'
+                        }}
+                      />
+                    </div>
+                  </div>
               </div>
             )}
 

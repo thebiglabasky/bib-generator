@@ -1,18 +1,18 @@
 'use client';
 
-import { TemplateElement } from '@/types';
+import { ShapeElement as ShapeElementType } from '@/types';
 import React from 'react';
 
 interface ShapeElementProps {
-  element: TemplateElement;
+  element: ShapeElementType;
   isSelected: boolean;
   isDragging: boolean;
   isResizing: boolean;
   isRotating: boolean;
   isRotationMode: boolean;
-  onMouseDown: (e: React.MouseEvent, element: TemplateElement) => void;
-  onResizeStart: (e: React.MouseEvent, element: TemplateElement, corner: 'nw' | 'ne' | 'sw' | 'se') => void;
-  onRotationStart: (e: React.MouseEvent, element: TemplateElement) => void;
+  onMouseDown: (e: React.MouseEvent, element: ShapeElementType) => void;
+  onResizeStart: (e: React.MouseEvent, element: ShapeElementType, corner: 'nw' | 'ne' | 'sw' | 'se') => void;
+  onRotationStart: (e: React.MouseEvent, element: ShapeElementType) => void;
 }
 
 export default function ShapeElement({

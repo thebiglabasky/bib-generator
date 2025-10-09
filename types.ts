@@ -54,6 +54,8 @@ export interface TextElement extends BaseTemplateElement {
   textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
   anchor?: 'left' | 'center' | 'right'; // horizontal anchor point for positioning
   verticalAnchor?: 'top' | 'middle' | 'bottom'; // vertical anchor point for positioning
+  width?: number; // percentage of container width
+  height?: number; // percentage of container height
 }
 
 // Image element specific properties

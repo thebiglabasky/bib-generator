@@ -15,47 +15,67 @@ const DEFAULT_TEMPLATE: BibTemplateConfig = {
     {
       id: 'color-tag',
       type: 'text',
-      x: 80,
-      y: 10,
+      x: 5,
+      y: 5,
+      width: 40,
+      height: 5,
       fontSize: 18,
       fontWeight: 700,
-      color: '#ffffff',
-      textAlign: 'center',
+      fontFamily: '"Oswald", sans-serif',
+      color: '#2d3748',
+      textAlign: 'left',
       textTransform: 'uppercase',
+      anchor: 'left',
+      verticalAnchor: 'top',
       content: '{race.distance}'
     },
     {
       id: 'bib-number',
       type: 'text',
-      x: 50,
-      y: 40,
+      x: 5,
+      y: 30,
+      width: 90,
+      height: 25,
       fontSize: 120,
       fontWeight: 900,
+      fontFamily: '"Bebas Neue", sans-serif',
       color: '#2d3748',
       textAlign: 'center',
+      anchor: 'center',
+      verticalAnchor: 'top',
       content: '{bib.number}'
     },
     {
       id: 'first-name',
       type: 'text',
-      x: 50,
-      y: 70,
+      x: 5,
+      y: 60,
+      width: 90,
+      height: 15,
       fontSize: 48,
       fontWeight: 600,
+      fontFamily: '"Montserrat", sans-serif',
       color: '#4a5568',
       textAlign: 'center',
+      anchor: 'center',
+      verticalAnchor: 'top',
       content: '{participant.firstName}'
     },
     {
       id: 'last-name',
       type: 'text',
-      x: 50,
-      y: 85,
+      x: 5,
+      y: 78,
+      width: 90,
+      height: 18,
       fontSize: 56,
       fontWeight: 900,
+      fontFamily: '"Montserrat", sans-serif',
       color: '#1a202c',
       textAlign: 'center',
       textTransform: 'uppercase',
+      anchor: 'center',
+      verticalAnchor: 'top',
       content: '{participant.lastName}'
     }
   ]
@@ -116,7 +136,7 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
   const [template, setTemplate] = useState<BibTemplateConfig>(DEFAULT_TEMPLATE);
 
   useEffect(() => {
-    const savedTemplate = localStorage.getItem('bibTemplate');
+    const savedTemplate = localStorage.getItem('bib-template-design');
     if (savedTemplate) {
       try {
         const parsed = JSON.parse(savedTemplate);
@@ -135,33 +155,10 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
   }, []);
 
   const renderElement = (element: TemplateElement) => {
-    const anchor = element.type === 'text' ? (element.anchor || 'left') : 'left';
-    const verticalAnchor = element.type === 'text' ? (element.verticalAnchor || 'top') : 'top';
-    const textAlign = anchor; // Use anchor for text alignment
-
-    // Calculate transform based on anchors
-    let transformX = '';
-    let transformY = '';
-
-    if (anchor === 'center') {
-      transformX = 'translateX(-50%)';
-    } else if (anchor === 'right') {
-      transformX = 'translateX(-100%)';
-    }
-
-    if (verticalAnchor === 'middle') {
-      transformY = 'translateY(-50%)';
-    } else if (verticalAnchor === 'bottom') {
-      transformY = 'translateY(-100%)';
-    }
-
-    const transform = [transformX, transformY].filter(Boolean).join(' ') || 'none';
-
     const style: React.CSSProperties = {
       position: 'absolute',
       left: `${element.x}%`,
       top: `${element.y}%`,
-      transform,
     };
 
     if (element.type === 'shape') {
@@ -174,21 +171,6 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
       // Apply rotation transform
       const transform = rotation !== 0 ? `rotate(${rotation}deg)` : undefined;
 
-      // Add pattern for shapes with variable-based colors
-      const hasVariableColor = element.backgroundColor && element.backgroundColor.includes('{') && element.backgroundColor.includes('}');
-      const backgroundStyle = hasVariableColor
-        ? {
-            backgroundColor: backgroundColor,
-            backgroundImage: `repeating-linear-gradient(
-              45deg,
-              rgba(0, 0, 0, 0.1) 0px,
-              rgba(0, 0, 0, 0.1) 2px,
-              transparent 2px,
-              transparent 8px
-            )`
-          }
-        : { backgroundColor: backgroundColor };
-
       return (
         <div
           key={element.id}
@@ -196,7 +178,7 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
             ...style,
             width: `${element.width}%`,
             height: `${element.height}%`,
-            ...backgroundStyle,
+            backgroundColor: backgroundColor,
             border: borderWidth > 0 ? `${borderWidth}px solid ${borderColor}` : 'none',
             borderRadius: `${borderRadius}px`,
             transform: transform,
@@ -230,22 +212,42 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
       );
     }
 
+    const hasExplicitSize = element.width !== undefined && element.height !== undefined;
+    const textAlign = element.anchor || 'left';
+    const verticalAnchor = element.verticalAnchor || 'top';
+
+    // Map vertical anchor to flexbox alignment
+    let alignItems: 'flex-start' | 'center' | 'flex-end' = 'flex-start';
+    if (verticalAnchor === 'middle') {
+      alignItems = 'center';
+    } else if (verticalAnchor === 'bottom') {
+      alignItems = 'flex-end';
+    }
+
     return (
       <div
         key={element.id}
         style={{
           ...style,
+          width: hasExplicitSize ? `${element.width}%` : 'auto',
+          height: hasExplicitSize ? `${element.height}%` : 'auto',
+          display: 'flex',
+          alignItems: alignItems,
           fontSize: `${element.fontSize}px`,
           fontWeight: element.fontWeight,
           fontFamily: element.fontFamily,
           color: resolveColorValue(element.color, bib, '#000000'),
           textAlign: textAlign,
           textTransform: element.textTransform,
-          whiteSpace: 'pre-wrap',
-          lineHeight: 1.2
+          whiteSpace: hasExplicitSize ? 'pre-wrap' : 'pre-wrap',
+          lineHeight: 1.2,
+          overflow: hasExplicitSize ? 'hidden' : 'visible',
+          boxSizing: 'border-box'
         }}
       >
-        {replaceTemplateVariables(element.content || '', bib)}
+        <div style={{ width: '100%' }}>
+          {replaceTemplateVariables(element.content || '', bib)}
+        </div>
       </div>
     );
   };

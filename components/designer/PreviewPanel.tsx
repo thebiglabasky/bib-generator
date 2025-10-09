@@ -95,32 +95,10 @@ export default function PreviewPanel({ template, isVisible }: PreviewPanelProps)
   };
 
   const renderElement = (element: TemplateElement) => {
-    const anchor = element.type === 'text' ? (element.anchor || 'left') : 'left';
-    const verticalAnchor = element.type === 'text' ? (element.verticalAnchor || 'top') : 'top';
-    const textAlign = anchor;
-
-    let transformX = '';
-    let transformY = '';
-
-    if (anchor === 'center') {
-      transformX = 'translateX(-50%)';
-    } else if (anchor === 'right') {
-      transformX = 'translateX(-100%)';
-    }
-
-    if (verticalAnchor === 'middle') {
-      transformY = 'translateY(-50%)';
-    } else if (verticalAnchor === 'bottom') {
-      transformY = 'translateY(-100%)';
-    }
-
-    const transform = [transformX, transformY].filter(Boolean).join(' ') || 'none';
-
     const style: React.CSSProperties = {
       position: 'absolute',
       left: `${element.x}%`,
       top: `${element.y}%`,
-      transform,
     };
 
     if (element.type === 'shape') {
@@ -172,22 +150,42 @@ export default function PreviewPanel({ template, isVisible }: PreviewPanelProps)
       );
     }
 
+    const hasExplicitSize = element.width !== undefined && element.height !== undefined;
+    const textAlign = element.anchor || 'left';
+    const verticalAnchor = element.verticalAnchor || 'top';
+
+    // Map vertical anchor to flexbox alignment
+    let alignItems: 'flex-start' | 'center' | 'flex-end' = 'flex-start';
+    if (verticalAnchor === 'middle') {
+      alignItems = 'center';
+    } else if (verticalAnchor === 'bottom') {
+      alignItems = 'flex-end';
+    }
+
     return (
       <div
         key={element.id}
         style={{
           ...style,
+          width: hasExplicitSize ? `${element.width}%` : 'auto',
+          height: hasExplicitSize ? `${element.height}%` : 'auto',
+          display: 'flex',
+          alignItems: alignItems,
           fontSize: `${element.fontSize}px`,
           fontWeight: element.fontWeight,
           fontFamily: element.fontFamily,
           color: resolveColorValue(element.color, testData, '#000000'),
           textAlign: textAlign,
           textTransform: element.textTransform,
-          whiteSpace: 'pre-wrap',
-          lineHeight: 1.2
+          whiteSpace: hasExplicitSize ? 'pre-wrap' : 'pre-wrap',
+          lineHeight: 1.2,
+          overflow: hasExplicitSize ? 'hidden' : 'visible',
+          boxSizing: 'border-box'
         }}
       >
-        {replaceTemplateVariables(element.content || '', testData)}
+        <div style={{ width: '100%' }}>
+          {replaceTemplateVariables(element.content || '', testData)}
+        </div>
       </div>
     );
   };

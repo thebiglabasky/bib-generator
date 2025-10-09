@@ -1,63 +1,127 @@
 'use client';
 
-import { TemplateElement } from '@/types';
+import { TemplateElement, TextElement as TextElementType } from '@/types';
 import React from 'react';
 
 interface TextElementProps {
   element: TemplateElement;
   isSelected: boolean;
   isDragging: boolean;
+  isResizing: boolean;
   onMouseDown: (e: React.MouseEvent, element: TemplateElement) => void;
+  onResizeStart: (e: React.MouseEvent, element: TemplateElement, corner: 'nw' | 'ne' | 'sw' | 'se') => void;
 }
 
-export default function TextElement({ element, isSelected, isDragging, onMouseDown }: TextElementProps) {
-  const anchor = element.anchor || 'left';
-  const verticalAnchor = element.verticalAnchor || 'top';
-  const textAlign = anchor;
+export default function TextElement({
+  element,
+  isSelected,
+  isDragging,
+  isResizing,
+  onMouseDown,
+  onResizeStart
+}: TextElementProps) {
+  const textElement = element as TextElementType;
+  const textAlign = textElement.anchor || 'left';
+  const verticalAnchor = textElement.verticalAnchor || 'top';
 
-  let transformX = '';
-  let transformY = '';
-
-  if (anchor === 'center') {
-    transformX = 'translateX(-50%)';
-  } else if (anchor === 'right') {
-    transformX = 'translateX(-100%)';
-  }
-
+  // Map vertical anchor to flexbox alignment
+  let alignItems: 'flex-start' | 'center' | 'flex-end' = 'flex-start';
   if (verticalAnchor === 'middle') {
-    transformY = 'translateY(-50%)';
+    alignItems = 'center';
   } else if (verticalAnchor === 'bottom') {
-    transformY = 'translateY(-100%)';
+    alignItems = 'flex-end';
   }
-
-  const transform = [transformX, transformY].filter(Boolean).join(' ') || 'none';
 
   return (
     <div
-      key={element.id}
-      id={element.id}
+      key={textElement.id}
+      id={textElement.id}
       style={{
         position: 'absolute',
-        left: `${element.x}%`,
-        top: `${element.y}%`,
-        fontSize: `${element.fontSize}px`,
-        fontWeight: element.fontWeight,
-        fontFamily: element.fontFamily,
-        color: element.color,
+        left: `${textElement.x}%`,
+        top: `${textElement.y}%`,
+        width: `${textElement.width || 30}%`,
+        height: `${textElement.height || 10}%`,
+        display: 'flex',
+        alignItems: alignItems,
+        fontSize: `${textElement.fontSize}px`,
+        fontWeight: textElement.fontWeight,
+        fontFamily: textElement.fontFamily,
+        color: textElement.color,
         textAlign: textAlign,
-        textTransform: element.textTransform,
-        cursor: isDragging ? 'grabbing' : 'grab',
+        textTransform: textElement.textTransform,
+        cursor: isResizing ? 'default' : isDragging ? 'grabbing' : 'grab',
         border: isSelected ? '2px solid #667eea' : '1px dashed #cbd5e0',
         background: isSelected ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
         padding: '4px',
-        minWidth: '50px',
-        whiteSpace: 'nowrap',
+        whiteSpace: 'pre-wrap',
+        overflow: 'hidden',
         userSelect: 'none',
-        transform: transform
+        boxSizing: 'border-box'
       }}
       onMouseDown={(e) => onMouseDown(e, element)}
     >
-      {element.content}
+      <div style={{ width: '100%' }}>
+        {textElement.content}
+      </div>
+
+      {/* Resize handles - always show when selected */}
+      {isSelected && (
+        <>
+          <div
+            style={{
+              position: 'absolute',
+              left: '-4px',
+              top: '-4px',
+              width: '8px',
+              height: '8px',
+              background: '#667eea',
+              border: '1px solid white',
+              cursor: 'nw-resize'
+            }}
+            onMouseDown={(e) => onResizeStart(e, textElement, 'nw')}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              right: '-4px',
+              top: '-4px',
+              width: '8px',
+              height: '8px',
+              background: '#667eea',
+              border: '1px solid white',
+              cursor: 'ne-resize'
+            }}
+            onMouseDown={(e) => onResizeStart(e, textElement, 'ne')}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              left: '-4px',
+              bottom: '-4px',
+              width: '8px',
+              height: '8px',
+              background: '#667eea',
+              border: '1px solid white',
+              cursor: 'sw-resize'
+            }}
+            onMouseDown={(e) => onResizeStart(e, textElement, 'sw')}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              right: '-4px',
+              bottom: '-4px',
+              width: '8px',
+              height: '8px',
+              background: '#667eea',
+              border: '1px solid white',
+              cursor: 'se-resize'
+            }}
+            onMouseDown={(e) => onResizeStart(e, textElement, 'se')}
+          />
+        </>
+      )}
     </div>
   );
 }

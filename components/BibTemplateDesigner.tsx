@@ -19,23 +19,27 @@ const DEFAULT_TEMPLATE: BibTemplateConfig = {
     {
       id: 'color-tag',
       type: 'text',
-      x: 80,
-      y: 10,
+      x: 5,
+      y: 5,
+      width: 40,
+      height: 5,
       fontSize: 18,
       fontWeight: 700,
       fontFamily: '"Oswald", sans-serif',
-      color: '#ffffff',
-      textAlign: 'center',
+      color: '#2d3748',
+      textAlign: 'left',
       textTransform: 'uppercase',
-      anchor: 'center',
+      anchor: 'left',
       verticalAnchor: 'top',
       content: '{race.distance}'
     },
     {
       id: 'bib-number',
       type: 'text',
-      x: 50,
-      y: 40,
+      x: 5,
+      y: 30,
+      width: 90,
+      height: 25,
       fontSize: 120,
       fontWeight: 900,
       fontFamily: '"Bebas Neue", sans-serif',
@@ -48,8 +52,10 @@ const DEFAULT_TEMPLATE: BibTemplateConfig = {
     {
       id: 'first-name',
       type: 'text',
-      x: 50,
-      y: 70,
+      x: 5,
+      y: 60,
+      width: 90,
+      height: 15,
       fontSize: 48,
       fontWeight: 600,
       fontFamily: '"Montserrat", sans-serif',
@@ -62,8 +68,10 @@ const DEFAULT_TEMPLATE: BibTemplateConfig = {
     {
       id: 'last-name',
       type: 'text',
-      x: 50,
-      y: 85,
+      x: 5,
+      y: 78,
+      width: 90,
+      height: 18,
       fontSize: 56,
       fontWeight: 900,
       fontFamily: '"Montserrat", sans-serif',
@@ -143,26 +151,13 @@ export default function BibTemplateDesigner() {
     let anchorY: number;
 
     if (isRotated) {
+      // For rotated elements, drag from center
       anchorX = baseX + elementWidth / 2;
       anchorY = baseY + elementHeight / 2;
     } else {
-      const anchor = element.type === 'text' ? (element.anchor || 'left') : 'left';
-      const verticalAnchor = element.type === 'text' ? (element.verticalAnchor || 'top') : 'top';
-
+      // For all non-rotated elements (including text), drag from top-left
       anchorX = baseX;
       anchorY = baseY;
-
-      if (anchor === 'center') {
-        anchorX = baseX + elementWidth / 2;
-      } else if (anchor === 'right') {
-        anchorX = baseX + elementWidth;
-      }
-
-      if (verticalAnchor === 'middle') {
-        anchorY = baseY + elementHeight / 2;
-      } else if (verticalAnchor === 'bottom') {
-        anchorY = baseY + elementHeight;
-      }
     }
 
     const offsetX = e.clientX - anchorX;
@@ -179,7 +174,9 @@ export default function BibTemplateDesigner() {
     e.stopPropagation();
 
     if (!canvasRef.current) return;
-    if (element.type === 'text') return; // Text elements don't support manual resizing
+
+    // Only allow resizing elements that have width/height defined
+    if (element.width === undefined || element.height === undefined) return;
 
     setResizingElement({
       element,
@@ -266,34 +263,8 @@ export default function BibTemplateDesigner() {
           setSelectedElement(prev => prev ? { ...prev, x: clampedX, y: clampedY } : null);
         }
       } else {
-        const anchorX = ((e.clientX - rect.left - draggedElement.offsetX) / rect.width) * 100;
-        const anchorY = ((e.clientY - rect.top - draggedElement.offsetY) / rect.height) * 100;
-
-        let x = anchorX;
-        let y = anchorY;
-
-        if (element.type === 'text') {
-          const elementRect = document.getElementById(element.id)?.getBoundingClientRect();
-          if (elementRect) {
-            const elementWidthPercent = (elementRect.width / rect.width) * 100;
-            const elementHeightPercent = (elementRect.height / rect.height) * 100;
-
-            const anchor = element.anchor || 'left';
-            const verticalAnchor = element.verticalAnchor || 'top';
-
-            if (anchor === 'center') {
-              x = anchorX - elementWidthPercent / 2;
-            } else if (anchor === 'right') {
-              x = anchorX - elementWidthPercent;
-            }
-
-            if (verticalAnchor === 'middle') {
-              y = anchorY - elementHeightPercent / 2;
-            } else if (verticalAnchor === 'bottom') {
-              y = anchorY - elementHeightPercent;
-            }
-          }
-        }
+        const x = ((e.clientX - rect.left - draggedElement.offsetX) / rect.width) * 100;
+        const y = ((e.clientY - rect.top - draggedElement.offsetY) / rect.height) * 100;
 
         const clampedX = Math.max(0, Math.min(100, x));
         const clampedY = Math.max(0, Math.min(100, y));
@@ -595,6 +566,8 @@ export default function BibTemplateDesigner() {
       type: 'text',
       x: 50,
       y: 50,
+      width: 30,
+      height: 10,
       fontSize: 24,
       fontWeight: 400,
       fontFamily: '"Roboto", sans-serif',
@@ -1032,6 +1005,7 @@ export default function BibTemplateDesigner() {
 
       <ToolsPanel
         selectedElement={selectedElement}
+        canvasRef={canvasRef}
         onAddTextElement={addTextElement}
         onAddShapeElement={addShapeElement}
         onImageUpload={handleImageUpload}
