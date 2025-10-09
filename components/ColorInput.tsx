@@ -9,13 +9,15 @@ interface ColorInputProps {
   value: string | undefined;
   onChange: (value: string) => void;
   placeholder?: string;
+  compact?: boolean; // For smaller layouts
 }
 
 export default function ColorInput({
   label,
   value,
   onChange,
-  placeholder = '{race.color}'
+  placeholder = '{race.color}',
+  compact = false
 }: ColorInputProps) {
   // Determine initial mode based on value
   const isVariable = value?.includes('{') || !value?.startsWith('#');
@@ -83,7 +85,8 @@ export default function ColorInput({
               borderRadius: '3px',
               fontSize: '11px',
               height: '24px',
-              boxSizing: 'border-box'
+              boxSizing: 'border-box',
+              minWidth: 0 // Allow shrinking
             }}
           />
         ) : (
@@ -100,7 +103,8 @@ export default function ColorInput({
                 fontSize: '11px',
                 fontFamily: 'monospace',
                 height: '24px',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                minWidth: compact ? '50px' : '80px' // Minimum readable width
               }}
             />
             <input

@@ -1,8 +1,9 @@
 'use client';
 
 import { extractFontFamilies, loadFont, loadFonts } from '@/lib/font-loader';
+import { useHistory } from '@/lib/use-history';
 import { BibTemplateConfig, TemplateElement } from '@/types';
-import { Download, Eye, EyeOff, Image, Square, Type, Upload } from 'lucide-react';
+import { Download, Eye, EyeOff, Image, Redo, Square, Type, Undo, Upload } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Canvas from './designer/Canvas';
 import LayersPanel from './designer/LayersPanel';
@@ -80,6 +81,7 @@ interface DraggedElement {
   element: TemplateElement;
   offsetX: number;
   offsetY: number;
+  initialState: TemplateElement; // State before dragging started
 }
 
 interface ResizeState {
@@ -91,6 +93,7 @@ interface ResizeState {
   startHeight: number;
   startLeft: number;
   startTop: number;
+  initialState: TemplateElement; // State before resizing started
 }
 
 interface RotationState {
@@ -99,6 +102,7 @@ interface RotationState {
   startRotation: number;
   centerX: number;
   centerY: number;
+  initialState: TemplateElement; // State before rotating started
 }
 
 const LOCALSTORAGE_KEY = 'bib-template-design';
@@ -114,6 +118,7 @@ export default function BibTemplateDesigner() {
   const [showPreview, setShowPreview] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { recordAction, undo, redo, canUndo, canRedo } = useHistory();
 
   const handleMouseDown = useCallback((e: React.MouseEvent, element: TemplateElement) => {
     e.preventDefault();
@@ -163,7 +168,7 @@ export default function BibTemplateDesigner() {
     const offsetX = e.clientX - anchorX;
     const offsetY = e.clientY - anchorY;
 
-    setDraggedElement({ element, offsetX, offsetY });
+    setDraggedElement({ element, offsetX, offsetY, initialState: { ...element } });
     setSelectedElement(element);
 
     document.body.style.userSelect = 'none';
@@ -184,7 +189,8 @@ export default function BibTemplateDesigner() {
       startWidth: element.width || 20,
       startHeight: element.height || 20,
       startLeft: element.x,
-      startTop: element.y
+      startTop: element.y,
+      initialState: { ...element }
     });
 
     setSelectedElement(element);
@@ -215,7 +221,8 @@ export default function BibTemplateDesigner() {
       startAngle,
       startRotation: element.rotation || 0,
       centerX,
-      centerY
+      centerY,
+      initialState: { ...element }
     });
 
     setSelectedElement(element);
@@ -404,11 +411,31 @@ export default function BibTemplateDesigner() {
   }, [draggedElement, resizingElement, rotatingElement, selectedElement]);
 
   const handleMouseUp = useCallback(() => {
+    // Record history for drag/resize/rotate operations when they complete
+    if (draggedElement) {
+      const element = template.elements.find(el => el.id === draggedElement.element.id);
+      if (element) {
+        recordAction('move', element.id, draggedElement.initialState, element);
+      }
+    }
+    if (resizingElement) {
+      const element = template.elements.find(el => el.id === resizingElement.element.id);
+      if (element) {
+        recordAction('resize', element.id, resizingElement.initialState, element);
+      }
+    }
+    if (rotatingElement) {
+      const element = template.elements.find(el => el.id === rotatingElement.element.id);
+      if (element) {
+        recordAction('rotate', element.id, rotatingElement.initialState, element);
+      }
+    }
+
     setDraggedElement(null);
     setResizingElement(null);
     setRotatingElement(null);
     document.body.style.userSelect = '';
-  }, []);
+  }, [draggedElement, resizingElement, rotatingElement, template.elements, recordAction]);
 
   const handleGlobalMouseMove = useCallback((e: MouseEvent) => {
     handleMouseMove(e as any);
@@ -418,9 +445,91 @@ export default function BibTemplateDesigner() {
     handleMouseUp();
   }, [handleMouseUp]);
 
+  const handleUndo = useCallback(() => {
+    const entry = undo();
+    if (!entry) return;
+
+    // Restore the state based on the action type
+    if (entry.type === 'delete') {
+      // Restore deleted element (beforeState has the element)
+      if (entry.beforeState) {
+        setTemplate(prev => ({
+          ...prev,
+          elements: [...prev.elements, entry.beforeState!]
+        }));
+      }
+    } else if (entry.type === 'add') {
+      // Remove added element
+      setTemplate(prev => ({
+        ...prev,
+        elements: prev.elements.filter(el => el.id !== entry.elementId)
+      }));
+      setSelectedElement(null);
+    } else {
+      // For move, resize, rotate, property changes - restore beforeState
+      setTemplate(prev => ({
+        ...prev,
+        elements: prev.elements.map(el =>
+          el.id === entry.elementId && entry.beforeState
+            ? entry.beforeState
+            : el
+        )
+      }));
+      if (selectedElement?.id === entry.elementId && entry.beforeState) {
+        setSelectedElement(entry.beforeState);
+      }
+    }
+  }, [undo, selectedElement]);
+
+  const handleRedo = useCallback(() => {
+    const entry = redo();
+    if (!entry) return;
+
+    // Apply the state based on the action type
+    if (entry.type === 'add') {
+      // Re-add element (afterState has the element)
+      if (entry.afterState) {
+        setTemplate(prev => ({
+          ...prev,
+          elements: [...prev.elements, entry.afterState!]
+        }));
+      }
+    } else if (entry.type === 'delete') {
+      // Re-delete element
+      setTemplate(prev => ({
+        ...prev,
+        elements: prev.elements.filter(el => el.id !== entry.elementId)
+      }));
+      setSelectedElement(null);
+    } else {
+      // For move, resize, rotate, property changes - apply afterState
+      setTemplate(prev => ({
+        ...prev,
+        elements: prev.elements.map(el =>
+          el.id === entry.elementId && entry.afterState
+            ? entry.afterState
+            : el
+        )
+      }));
+      if (selectedElement?.id === entry.elementId && entry.afterState) {
+        setSelectedElement(entry.afterState);
+      }
+    }
+  }, [redo, selectedElement]);
+
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey) {
+        // Check for undo/redo shortcuts
+        if (e.key === 'z' || e.key === 'Z') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            handleRedo();
+          } else {
+            handleUndo();
+          }
+          return;
+        }
         setIsRotationMode(true);
       }
     };
@@ -438,7 +547,7 @@ export default function BibTemplateDesigner() {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [handleUndo, handleRedo]);
 
   React.useEffect(() => {
     if (draggedElement || resizingElement || rotatingElement) {
@@ -475,9 +584,10 @@ export default function BibTemplateDesigner() {
         elements: [...prev.elements, newElement]
       }));
       setSelectedElement(newElement);
+      recordAction('add', newElement.id, null, newElement);
     };
     reader.readAsDataURL(file);
-  }, []);
+  }, [recordAction]);
 
   const addTextElement = useCallback(() => {
     const newElement: TemplateElement = {
@@ -500,7 +610,8 @@ export default function BibTemplateDesigner() {
       elements: [...prev.elements, newElement]
     }));
     setSelectedElement(newElement);
-  }, []);
+    recordAction('add', newElement.id, null, newElement);
+  }, [recordAction]);
 
   const addShapeElement = useCallback(() => {
     const newElement: TemplateElement = {
@@ -522,9 +633,15 @@ export default function BibTemplateDesigner() {
       elements: [...prev.elements, newElement]
     }));
     setSelectedElement(newElement);
-  }, []);
+    recordAction('add', newElement.id, null, newElement);
+  }, [recordAction]);
 
   const deleteElement = useCallback((elementId: string) => {
+    const element = template.elements.find(el => el.id === elementId);
+    if (element) {
+      recordAction('delete', element.id, element, null);
+    }
+
     setTemplate(prev => ({
       ...prev,
       elements: prev.elements.filter(el => el.id !== elementId)
@@ -532,7 +649,7 @@ export default function BibTemplateDesigner() {
     if (selectedElement?.id === elementId) {
       setSelectedElement(null);
     }
-  }, [selectedElement]);
+  }, [selectedElement, template.elements, recordAction]);
 
   const bringToFront = useCallback(() => {
     if (!selectedElement) return;
@@ -636,16 +753,21 @@ export default function BibTemplateDesigner() {
       await loadFont(updates.fontFamily);
     }
 
+    const beforeState = { ...selectedElement };
+    const updatedElement = { ...selectedElement, ...updates };
+
     setTemplate(prev => ({
       ...prev,
       elements: prev.elements.map(el =>
         el.id === selectedElement.id
-          ? { ...el, ...updates }
+          ? updatedElement
           : el
       )
     }));
-    setSelectedElement(prev => prev ? { ...prev, ...updates } : null);
-  }, [selectedElement]);
+    setSelectedElement(updatedElement);
+
+    recordAction('property', updatedElement.id, beforeState, updatedElement);
+  }, [selectedElement, recordAction]);
 
   const updateElementName = useCallback((elementId: string, name: string) => {
     setTemplate(prev => ({
@@ -661,11 +783,16 @@ export default function BibTemplateDesigner() {
   }, []);
 
   const handleReorderElements = useCallback((elements: TemplateElement[]) => {
+    const oldElements = template.elements;
     setTemplate(prev => ({
       ...prev,
       elements
     }));
-  }, []);
+    // Record reorder action with the first element as reference
+    if (elements.length > 0 && oldElements.length > 0) {
+      recordAction('reorder', elements[0].id, oldElements[0], elements[0]);
+    }
+  }, [recordAction, template.elements]);
 
   // Load from localStorage on mount (client-side only)
   useEffect(() => {
@@ -761,71 +888,117 @@ export default function BibTemplateDesigner() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {/* Import/Export Controls */}
-        <div style={{ display: 'flex', gap: '10px', padding: '15px', background: '#f7fafc', borderRadius: '12px' }}>
-          <button
-            onClick={exportTemplate}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 16px',
-              background: '#667eea',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}
-          >
-            <Download size={18} />
-            Exporter le template
-          </button>
-          <button
-            onClick={triggerFileInput}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 16px',
-              background: '#48bb78',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}
-          >
-            <Upload size={18} />
-            Importer un template
-          </button>
-          <button
-            onClick={() => setShowPreview(!showPreview)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 16px',
-              background: showPreview ? '#f59e0b' : 'white',
-              color: showPreview ? 'white' : '#4a5568',
-              border: showPreview ? 'none' : '1px solid #e2e8f0',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}
-          >
-            {showPreview ? <EyeOff size={18} /> : <Eye size={18} />}
-            {showPreview ? 'Masquer prévisualisation' : 'Prévisualisation'}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json,.json"
-            onChange={importTemplate}
-            style={{ display: 'none' }}
-          />
+        <div style={{ display: 'flex', gap: '10px', padding: '15px', background: '#f7fafc', borderRadius: '12px', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={exportTemplate}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 16px',
+                background: '#667eea',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              <Download size={18} />
+              Exporter le template
+            </button>
+            <button
+              onClick={triggerFileInput}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 16px',
+                background: '#48bb78',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              <Upload size={18} />
+              Importer un template
+            </button>
+            <button
+              onClick={() => setShowPreview(!showPreview)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 16px',
+                background: showPreview ? '#f59e0b' : 'white',
+                color: showPreview ? 'white' : '#4a5568',
+                border: showPreview ? 'none' : '1px solid #e2e8f0',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              {showPreview ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showPreview ? 'Masquer prévisualisation' : 'Prévisualisation'}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              onChange={importTemplate}
+              style={{ display: 'none' }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button
+              onClick={handleUndo}
+              disabled={!canUndo}
+              title="Annuler (Cmd/Ctrl+Z)"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '10px 14px',
+                background: canUndo ? 'white' : '#e2e8f0',
+                color: canUndo ? '#4a5568' : '#a0aec0',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: canUndo ? 'pointer' : 'not-allowed',
+                opacity: canUndo ? 1 : 0.6
+              }}
+            >
+              <Undo size={18} />
+            </button>
+            <button
+              onClick={handleRedo}
+              disabled={!canRedo}
+              title="Rétablir (Cmd/Ctrl+Shift+Z)"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '10px 14px',
+                background: canRedo ? 'white' : '#e2e8f0',
+                color: canRedo ? '#4a5568' : '#a0aec0',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: canRedo ? 'pointer' : 'not-allowed',
+                opacity: canRedo ? 1 : 0.6
+              }}
+            >
+              <Redo size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Preview Panel */}

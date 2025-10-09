@@ -504,16 +504,17 @@ export default function ToolsPanel({
                   onChange={(value) => onUpdateElement({ backgroundColor: value })}
                 />
 
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'end' }}>
-                  <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <ColorInput
                       label="Bordure"
                       value={selectedElement.borderColor}
                       onChange={(value) => onUpdateElement({ borderColor: value })}
+                      compact
                     />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Épaisseur</label>
+                  <div style={{ width: '55px', flexShrink: 0 }}>
+                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px', height: '16px', lineHeight: '16px' }}>Épais.</label>
                     <input
                       type="number"
                       value={selectedElement.borderWidth || 0}
@@ -525,12 +526,14 @@ export default function ToolsPanel({
                         padding: '4px',
                         border: '1px solid #e2e8f0',
                         borderRadius: '3px',
-                        fontSize: '11px'
+                        fontSize: '11px',
+                        height: '24px',
+                        boxSizing: 'border-box'
                       }}
                     />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Coins</label>
+                  <div style={{ width: '55px', flexShrink: 0 }}>
+                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px', height: '16px', lineHeight: '16px' }}>Coins</label>
                     <input
                       type="number"
                       value={selectedElement.borderRadius || 0}
@@ -542,7 +545,9 @@ export default function ToolsPanel({
                         padding: '4px',
                         border: '1px solid #e2e8f0',
                         borderRadius: '3px',
-                        fontSize: '11px'
+                        fontSize: '11px',
+                        height: '24px',
+                        boxSizing: 'border-box'
                       }}
                     />
                   </div>
