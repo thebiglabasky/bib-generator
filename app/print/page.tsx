@@ -29,29 +29,51 @@ export default function PrintPage() {
           width: '210mm',
           height: '297mm',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          alignItems: 'stretch',
+          justifyContent: 'flex-start',
+          gap: '0',
+          margin: '0',
+          padding: '0',
+          boxSizing: 'border-box'
         }}>
           {pair.map((bib, idx) => (
-            <BibTemplate key={pairIdx * 2 + idx} bib={bib} />
+            <BibTemplate key={pairIdx * 2 + idx} bib={bib} isPrint />
           ))}
         </div>
       ))}
 
       <style jsx global>{`
-        body {
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
           margin: 0;
           padding: 0;
         }
 
+        html, body {
+          margin: 0;
+          padding: 0;
+          line-height: 1;
+        }
+
         @media print {
           @page {
-            size: A5 landscape;
+            size: A4 portrait;
             margin: 0;
           }
 
-          body {
-            margin: 0;
-            padding: 0;
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1;
           }
         }
       `}</style>

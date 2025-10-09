@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 interface BibTemplateProps {
   bib: BibData;
+  isPrint?: boolean;
 }
 
 const DEFAULT_TEMPLATE: BibTemplateConfig = {
@@ -132,7 +133,7 @@ function shouldDisplayElement(element: TemplateElement, bib: BibData): boolean {
   return actualValue === element.condition.value;
 }
 
-export default function BibTemplate({ bib }: BibTemplateProps) {
+export default function BibTemplate({ bib, isPrint = false }: BibTemplateProps) {
   const [template, setTemplate] = useState<BibTemplateConfig>(DEFAULT_TEMPLATE);
 
   useEffect(() => {
@@ -257,15 +258,18 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
       style={{
         width: `${template.width}mm`,
         height: `${template.height}mm`,
-        pageBreakAfter: 'always',
-        pageBreakInside: 'avoid',
-        padding: '20mm',
-        boxSizing: 'border-box',
+        pageBreakAfter: isPrint ? 'avoid' : 'always',
+        pageBreakInside: isPrint ? 'auto' : 'avoid',
+        padding: isPrint ? '0' : '20mm',
+        margin: '0',
+        boxSizing: isPrint ? 'content-box' : 'border-box',
         background: 'white',
         position: 'relative',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        flexShrink: 0,
+        overflow: 'visible'
       }}
     >
       <div
@@ -273,10 +277,14 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
           background: template.backgroundColor,
           width: '100%',
           height: '100%',
-          borderRadius: `${template.borderRadius}px`,
-          border: '1px solid #e5e7eb',
+          borderRadius: isPrint ? '0' : `${template.borderRadius}px`,
+          borderTop: isPrint ? 'none' : '1px solid #e5e7eb',
+          borderLeft: isPrint ? 'none' : '1px solid #e5e7eb',
+          borderRight: isPrint ? 'none' : '1px solid #e5e7eb',
+          borderBottom: isPrint ? '2px solid #000000' : '1px solid #e5e7eb',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          boxSizing: 'border-box'
         }}
       >
         {template.elements.filter(el => shouldDisplayElement(el, bib)).map(renderElement)}
