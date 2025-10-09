@@ -84,8 +84,8 @@ export default function BibTemplate({ bib }: BibTemplateProps) {
   }, []);
 
   const renderElement = (element: TemplateElement) => {
-    const anchor = element.anchor || 'left';
-    const verticalAnchor = element.verticalAnchor || 'top';
+    const anchor = element.type === 'text' ? (element.anchor || 'left') : 'left';
+    const verticalAnchor = element.type === 'text' ? (element.verticalAnchor || 'top') : 'top';
     const textAlign = anchor; // Use anchor for text alignment
 
     // Calculate transform based on anchors

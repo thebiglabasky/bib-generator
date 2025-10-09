@@ -27,14 +27,18 @@ export interface ParsedRow {
   [key: string]: string;
 }
 
-export interface TemplateElement {
+// Base properties shared by all element types
+interface BaseTemplateElement {
   id: string;
-  type: 'text' | 'image' | 'shape';
   name?: string; // custom display name for the layer
   x: number; // percentage of container width
   y: number; // percentage of container height
-  width?: number; // percentage of container width
-  height?: number; // percentage of container height
+}
+
+// Text element specific properties
+export interface TextElement extends BaseTemplateElement {
+  type: 'text';
+  content?: string;
   fontSize?: number;
   fontWeight?: number;
   fontFamily?: string;
@@ -43,17 +47,35 @@ export interface TemplateElement {
   textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
   anchor?: 'left' | 'center' | 'right'; // horizontal anchor point for positioning
   verticalAnchor?: 'top' | 'middle' | 'bottom'; // vertical anchor point for positioning
-  content?: string; // for text elements
-  src?: string; // for image elements
-  objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down'; // for image elements
-  preserveAspectRatio?: boolean; // for image elements - whether to maintain aspect ratio during resize
-  rotation?: number; // rotation angle in degrees, for image elements and shapes
-  shapeType?: 'square'; // for shape elements - starting with square
-  backgroundColor?: string; // for shape elements
-  borderWidth?: number; // for shape elements
-  borderColor?: string; // for shape elements
-  borderRadius?: number; // for shape elements - corner radius
 }
+
+// Image element specific properties
+export interface ImageElement extends BaseTemplateElement {
+  type: 'image';
+  src?: string;
+  width?: number; // percentage of container width
+  height?: number; // percentage of container height
+  objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
+  preserveAspectRatio?: boolean; // whether to maintain aspect ratio during resize
+  rotation?: number; // rotation angle in degrees
+}
+
+// Shape element specific properties
+export interface ShapeElement extends BaseTemplateElement {
+  type: 'shape';
+  width?: number; // percentage of container width
+  height?: number; // percentage of container height
+  shapeType?: 'square'; // starting with square
+  backgroundColor?: string;
+  borderWidth?: number;
+  borderColor?: string;
+  borderRadius?: number; // corner radius
+  preserveAspectRatio?: boolean; // whether to maintain aspect ratio during resize
+  rotation?: number; // rotation angle in degrees
+}
+
+// Discriminated union of all element types
+export type TemplateElement = TextElement | ImageElement | ShapeElement;
 
 export interface BibTemplateConfig {
   width: number; // in mm
