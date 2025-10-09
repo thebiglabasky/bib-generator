@@ -173,6 +173,8 @@ export default function PreviewPanel({ template, isVisible }: PreviewPanelProps)
           alignItems: alignItems,
           fontSize: `${element.fontSize}px`,
           fontWeight: element.fontWeight,
+          fontStyle: element.fontStyle,
+          textDecoration: element.textDecoration,
           fontFamily: element.fontFamily,
           color: resolveColorValue(element.color, testData, '#000000'),
           textAlign: textAlign,

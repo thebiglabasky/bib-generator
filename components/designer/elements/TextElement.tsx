@@ -46,6 +46,8 @@ export default function TextElement({
         alignItems: alignItems,
         fontSize: `${textElement.fontSize}px`,
         fontWeight: textElement.fontWeight,
+        fontStyle: textElement.fontStyle,
+        textDecoration: textElement.textDecoration,
         fontFamily: textElement.fontFamily,
         color: textElement.color,
         textAlign: textAlign,

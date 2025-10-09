@@ -236,6 +236,8 @@ export default function BibTemplate({ bib, isPrint = false }: BibTemplateProps) 
           alignItems: alignItems,
           fontSize: `${element.fontSize}px`,
           fontWeight: element.fontWeight,
+          fontStyle: element.fontStyle,
+          textDecoration: element.textDecoration,
           fontFamily: element.fontFamily,
           color: resolveColorValue(element.color, bib, '#000000'),
           textAlign: textAlign,

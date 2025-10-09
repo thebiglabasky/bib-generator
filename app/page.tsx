@@ -4,7 +4,7 @@ import { processCSVToBibs } from '@/lib/bib-processor';
 import { ColumnMapping, ParsedRow, RaceConfig } from '@/types';
 import { Calendar, Palette, Printer, RotateCcw, Ruler, User, Users } from 'lucide-react';
 import Papa from 'papaparse';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const DEFAULT_RACE_CONFIGS: RaceConfig[] = [
   { id: '2016', label: '900m', yearMatch: '2016 et avant', color: '#3b82f6', isParent: false },
@@ -22,6 +22,7 @@ export default function Home() {
   const [raceConfigs, setRaceConfigs] = useState<RaceConfig[]>(DEFAULT_RACE_CONFIGS);
   const [step, setStep] = useState<'upload' | 'map' | 'config' | 'preview'>('upload');
   const [fileName, setFileName] = useState<string>('');
+  const isFirstRender = useRef(true);
 
   // Load persisted data on mount
   useEffect(() => {
@@ -32,6 +33,9 @@ export default function Home() {
       } catch (error) {
         console.error('Error loading race configs:', error);
       }
+    } else {
+      // Save default configs if none exist
+      localStorage.setItem('race-configs', JSON.stringify(DEFAULT_RACE_CONFIGS));
     }
 
     const savedCsvData = localStorage.getItem('csv-data');
@@ -52,8 +56,12 @@ export default function Home() {
     }
   }, []);
 
-  // Persist race configs whenever they change
+  // Persist race configs whenever they change (skip first render)
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     if (raceConfigs.length > 0) {
       localStorage.setItem('race-configs', JSON.stringify(raceConfigs));
     }
@@ -516,6 +524,7 @@ export default function Home() {
               gridTemplateColumns: '180px 180px 140px 120px',
               gap: '12px',
               fontWeight: '600',
+              padding: '10px',
               paddingBottom: '12px',
               borderBottom: '3px solid #e2e8f0',
               color: '#4a5568',
@@ -591,21 +600,14 @@ export default function Home() {
                       setRaceConfigs(updated);
                     }}
                     style={{
-                      width: '45px',
+                      width: '30px',
                       height: '36px',
                       border: '2px solid #e2e8f0',
                       borderRadius: '6px',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      flex: 1
                     }}
                   />
-                  <div style={{
-                    width: '55px',
-                    height: '28px',
-                    backgroundColor: config.color,
-                    borderRadius: '6px',
-                    border: '2px solid #e2e8f0',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                  }} />
                 </div>
                 <label style={{
                   fontSize: '14px',

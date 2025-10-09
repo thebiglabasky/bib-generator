@@ -10,15 +10,20 @@ import {
     ArrowDownToLine,
     ArrowUp,
     ArrowUpToLine,
+    Bold,
+    CaseLower,
+    CaseUpper,
     ChevronsDownUp,
     Image,
+    Italic,
     Maximize,
     Minimize,
     Move,
     Plus,
     Settings,
     Square,
-    Type
+    Type,
+    Underline
 } from 'lucide-react';
 import React from 'react';
 import ColorInput from '../ColorInput';
@@ -276,6 +281,109 @@ export default function ToolsPanel({
                       fontSize: '12px'
                     }}
                   />
+                      {/* Formatting toolbar */}
+                      <div style={{ display: 'flex', gap: '2px', marginTop: '8px' }}>
+                        <button
+                          title="Gras"
+                          onClick={() => {
+                            const isBold = (selectedElement.fontWeight || 400) >= 700;
+                            onUpdateElement({ fontWeight: isBold ? 400 : 700 });
+                          }}
+                          style={{
+                            padding: '6px',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '4px',
+                            background: (selectedElement.fontWeight || 400) >= 700 ? '#667eea' : '#f7fafc',
+                            color: (selectedElement.fontWeight || 400) >= 700 ? 'white' : '#4a5568',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <Bold size={14} />
+                        </button>
+                        <button
+                          title="Italique"
+                          onClick={() => {
+                            const next = (selectedElement.fontStyle || 'normal') === 'italic' ? 'normal' : 'italic';
+                            onUpdateElement({ fontStyle: next as any });
+                          }}
+                          style={{
+                            padding: '6px',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '4px',
+                            background: (selectedElement.fontStyle || 'normal') === 'italic' ? '#667eea' : '#f7fafc',
+                            color: (selectedElement.fontStyle || 'normal') === 'italic' ? 'white' : '#4a5568',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <Italic size={14} />
+                        </button>
+                        <button
+                          title="Souligné"
+                          onClick={() => {
+                            const next = (selectedElement.textDecoration || 'none') === 'underline' ? 'none' : 'underline';
+                            onUpdateElement({ textDecoration: next as any });
+                          }}
+                          style={{
+                            padding: '6px',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '4px',
+                            background: (selectedElement.textDecoration || 'none') === 'underline' ? '#667eea' : '#f7fafc',
+                            color: (selectedElement.textDecoration || 'none') === 'underline' ? 'white' : '#4a5568',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <Underline size={14} />
+                        </button>
+                        <button
+                          title="MAJUSCULES"
+                          onClick={() => {
+                            const next = (selectedElement.textTransform || 'none') === 'uppercase' ? 'none' : 'uppercase';
+                            onUpdateElement({ textTransform: next as any });
+                          }}
+                          style={{
+                            padding: '6px',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '4px',
+                            background: (selectedElement.textTransform || 'none') === 'uppercase' ? '#667eea' : '#f7fafc',
+                            color: (selectedElement.textTransform || 'none') === 'uppercase' ? 'white' : '#4a5568',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <CaseUpper size={14} />
+                        </button>
+                        <button
+                          title="minuscules"
+                          onClick={() => {
+                            const next = (selectedElement.textTransform || 'none') === 'lowercase' ? 'none' : 'lowercase';
+                            onUpdateElement({ textTransform: next as any });
+                          }}
+                          style={{
+                            padding: '6px',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '4px',
+                            background: (selectedElement.textTransform || 'none') === 'lowercase' ? '#667eea' : '#f7fafc',
+                            color: (selectedElement.textTransform || 'none') === 'lowercase' ? 'white' : '#4a5568',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <CaseLower size={14} />
+                        </button>
+                      </div>
                 </div>
 
                 <div>

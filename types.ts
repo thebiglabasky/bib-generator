@@ -49,6 +49,8 @@ export interface TextElement extends BaseTemplateElement {
   fontSize?: number;
   fontWeight?: number;
   fontFamily?: string;
+  fontStyle?: 'normal' | 'italic';
+  textDecoration?: 'none' | 'underline';
   color?: string;
   textAlign?: 'left' | 'center' | 'right';
   textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
