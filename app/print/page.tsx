@@ -8,9 +8,14 @@ export default function PrintPage() {
   const [bibs, setBibs] = useState<BibData[]>([]);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('bibs');
-    if (stored) {
-      setBibs(JSON.parse(stored));
+    // First try to get selected bibs, then fall back to all bibs
+    const selectedBibs = sessionStorage.getItem('selected-bibs');
+    const allBibs = sessionStorage.getItem('bibs');
+
+    if (selectedBibs) {
+      setBibs(JSON.parse(selectedBibs));
+    } else if (allBibs) {
+      setBibs(JSON.parse(allBibs));
     }
   }, []);
 

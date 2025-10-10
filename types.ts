@@ -12,6 +12,10 @@ export interface ColumnMapping {
   adultFirstName?: number;
   childFirstName?: number;
   birthYear?: number;
+  child2FirstName?: number;
+  child2BirthYear?: number;
+  child3FirstName?: number;
+  child3BirthYear?: number;
   relay?: number;
   adult2FirstName?: number;
 }
@@ -21,6 +25,7 @@ export interface BibData {
   firstName: string;
   lastName: string;
   raceConfig: RaceConfig;
+  category?: 'adult' | 'child1' | 'child2' | 'child3';
 }
 
 export interface ParsedRow {

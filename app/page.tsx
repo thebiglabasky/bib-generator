@@ -20,7 +20,7 @@ export default function Home() {
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<ColumnMapping>({});
   const [raceConfigs, setRaceConfigs] = useState<RaceConfig[]>(DEFAULT_RACE_CONFIGS);
-  const [step, setStep] = useState<'upload' | 'map' | 'config' | 'preview'>('upload');
+  const [step, setStep] = useState<'upload' | 'map' | 'config' | 'select'>('upload');
   const [fileName, setFileName] = useState<string>('');
   const isFirstRender = useRef(true);
 
@@ -67,6 +67,13 @@ export default function Home() {
     }
   }, [raceConfigs]);
 
+  // Redirect to select page when step is select
+  useEffect(() => {
+    if (step === 'select') {
+      window.location.href = '/select';
+    }
+  }, [step]);
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -92,14 +99,29 @@ export default function Home() {
           setCsvData(rows);
 
           // Auto-map columns based on known CSV structure
+          const findColumnIndex = (patterns: string[]) => {
+            for (const pattern of patterns) {
+              const index = parsedHeaders.findIndex(h =>
+                h.includes(pattern) ||
+                h.replace(/"/g, '').trim().includes(pattern)
+              );
+              if (index !== -1) return index;
+            }
+            return -1;
+          };
+
           const autoMapping: ColumnMapping = {
-            orderRef: parsedHeaders.findIndex(h => h.includes('Référence commande')),
-            familyName: parsedHeaders.findIndex(h => h.includes('Nom de famille')),
-            adultFirstName: parsedHeaders.findIndex(h => h.includes('Prénom Adulte 1')),
-            childFirstName: parsedHeaders.findIndex(h => h.includes('Prénom de l\'enfant')),
-            birthYear: parsedHeaders.findIndex(h => h.includes('Année de naissance')),
-            relay: parsedHeaders.findIndex(h => h.includes('Relais Adulte')),
-            adult2FirstName: parsedHeaders.findIndex(h => h.includes('Prénom Adulte 2')),
+            orderRef: findColumnIndex(['Référence commande']),
+            familyName: findColumnIndex(['Nom de famille']),
+            adultFirstName: findColumnIndex(['Prénom Adulte 1']),
+            childFirstName: findColumnIndex(['Prénom de l\'enfant']),
+            birthYear: findColumnIndex(['Année de naissance']),
+            child2FirstName: findColumnIndex(['Prénom de l\'enfant 2']),
+            child2BirthYear: findColumnIndex(['Année de naissance Enfant 2']),
+            child3FirstName: findColumnIndex(['Prénom de l\'enfant 3']),
+            child3BirthYear: findColumnIndex(['Année de naissance Enfant 3']),
+            relay: findColumnIndex(['Relais Adulte']),
+            adult2FirstName: findColumnIndex(['Prénom Adulte 2']),
           };
 
           // Replace -1 with undefined for not found columns
@@ -222,6 +244,22 @@ export default function Home() {
                   }}>3</div>
                   <span style={{ color: '#cbd5e0', fontWeight: '600', fontSize: '14px' }}>Courses</span>
                 </button>
+                <div style={{ width: '40px', height: '2px', background: '#cbd5e0' }} />
+                <button onClick={() => csvData.length > 0 && setStep('select')} disabled={csvData.length === 0} style={{ background: 'none', border: 'none', cursor: csvData.length > 0 ? 'pointer' : 'not-allowed', padding: 0, display: 'flex', alignItems: 'center', gap: '6px', opacity: csvData.length > 0 ? 1 : 0.5 }}>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    background: '#cbd5e0',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '13px'
+                  }}>4</div>
+                  <span style={{ color: '#cbd5e0', fontWeight: '600', fontSize: '14px' }}>Sélection</span>
+                </button>
               </div>
 
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
@@ -310,6 +348,22 @@ export default function Home() {
               }}>3</div>
               <span style={{ color: '#cbd5e0', fontWeight: '600', fontSize: '14px' }}>Courses</span>
             </button>
+            <div style={{ width: '40px', height: '2px', background: '#cbd5e0' }} />
+            <button onClick={() => setStep('select')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: '#cbd5e0',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                fontSize: '13px'
+              }}>4</div>
+              <span style={{ color: '#cbd5e0', fontWeight: '600', fontSize: '14px' }}>Sélection</span>
+            </button>
           </div>
 
           <div style={{ maxWidth: '900px', margin: '0 auto' }}>
@@ -333,7 +387,7 @@ export default function Home() {
                 <RotateCcw size={16} /> Recommencer
               </button>
               <button
-                onClick={() => setStep('config')}
+                onClick={() => setStep('select')}
                 style={{
                   padding: '10px 24px',
                   fontSize: '14px',
@@ -348,7 +402,7 @@ export default function Home() {
                   gap: '8px'
                 }}
               >
-                Configurer courses
+                Sélectionner dossards
               </button>
               <div style={{ flex: 1 }} />
               <button
@@ -380,6 +434,10 @@ export default function Home() {
               { key: 'adultFirstName', label: 'Prénom Adulte 1', icon: '👤' },
               { key: 'childFirstName', label: 'Prénom de l\'enfant', icon: '🧒' },
               { key: 'birthYear', label: 'Année de naissance', icon: '📅' },
+              { key: 'child2FirstName', label: 'Prénom de l\'enfant 2', icon: '👶' },
+              { key: 'child2BirthYear', label: 'Année de naissance Enfant 2', icon: '📅' },
+              { key: 'child3FirstName', label: 'Prénom de l\'enfant 3', icon: '👶' },
+              { key: 'child3BirthYear', label: 'Année de naissance Enfant 3', icon: '📅' },
               { key: 'relay', label: 'Relais Adulte', icon: '🔄' },
               { key: 'adult2FirstName', label: 'Prénom Adulte 2', icon: '👥' },
             ].map(({ key, label, icon }, idx, arr) => (
@@ -418,6 +476,84 @@ export default function Home() {
               </div>
             ))}
           </div>
+          </div>
+        </div>
+      )}
+
+      {step === 'select' && (
+        <div>
+          {/* Progress indicator */}
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '24px', gap: '8px' }}>
+            <button onClick={() => setStep('upload')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: '#22c55e',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                fontSize: '13px'
+              }}>1</div>
+              <span style={{ color: '#22c55e', fontWeight: '600', fontSize: '14px' }}>Import</span>
+            </button>
+            <div style={{ width: '40px', height: '2px', background: '#22c55e' }} />
+            <button onClick={() => setStep('map')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: '#22c55e',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                fontSize: '13px'
+              }}>2</div>
+              <span style={{ color: '#22c55e', fontWeight: '600', fontSize: '14px' }}>Colonnes</span>
+            </button>
+            <div style={{ width: '40px', height: '2px', background: '#22c55e' }} />
+            <button onClick={() => setStep('config')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: '#22c55e',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                fontSize: '13px'
+              }}>3</div>
+              <span style={{ color: '#22c55e', fontWeight: '600', fontSize: '14px' }}>Courses</span>
+            </button>
+            <div style={{ width: '40px', height: '2px', background: '#22c55e' }} />
+            <button onClick={() => setStep('select')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: '#667eea',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                fontSize: '13px'
+              }}>4</div>
+              <span style={{ color: '#667eea', fontWeight: '600', fontSize: '14px' }}>Sélection</span>
+            </button>
+          </div>
+
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚡</div>
+            <p style={{ color: '#718096', marginBottom: '20px', fontSize: '16px' }}>
+              Redirection vers la page de sélection...
+            </p>
           </div>
         </div>
       )}
@@ -473,6 +609,22 @@ export default function Home() {
               }}>3</div>
               <span style={{ color: '#667eea', fontWeight: '600', fontSize: '14px' }}>Courses</span>
             </button>
+            <div style={{ width: '40px', height: '2px', background: '#cbd5e0' }} />
+            <button onClick={() => setStep('select')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: '#cbd5e0',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                fontSize: '13px'
+              }}>4</div>
+              <span style={{ color: '#cbd5e0', fontWeight: '600', fontSize: '14px' }}>Sélection</span>
+            </button>
           </div>
 
           <div style={{ maxWidth: '900px', margin: '0 auto' }}>
@@ -497,7 +649,7 @@ export default function Home() {
               </button>
               <div style={{ flex: 1 }} />
               <button
-                onClick={handleGenerateBibs}
+                onClick={() => setStep('select')}
                 style={{
                   padding: '10px 24px',
                   fontSize: '14px',
@@ -514,7 +666,7 @@ export default function Home() {
                 }}
               >
                 <Printer size={16} />
-                Générer les dossards
+                Sélectionner dossards
               </button>
             </div>
 

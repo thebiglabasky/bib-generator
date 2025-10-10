@@ -44,36 +44,46 @@ export function processCSVToBibs(
       return;
     }
 
-    // Collect all children from all rows in this order
-    orderRows.forEach((row) => {
-      const rowValues = Object.values(row);
-      const childFirstName = rowValues[mapping.childFirstName!]?.trim();
-      const birthYears = rowValues[mapping.birthYear!]?.trim();
+    // Helper function to process children from specific column mappings
+    const processChildrenFromColumns = (firstNameIdx?: number, birthYearIdx?: number, category?: 'child1' | 'child2' | 'child3') => {
+      if (firstNameIdx == null || birthYearIdx == null) return;
 
-      if (!childFirstName || !birthYears) {
-        return;
-      }
+      orderRows.forEach((row) => {
+        const rowValues = Object.values(row);
+        const childFirstName = rowValues[firstNameIdx]?.trim();
+        const birthYears = rowValues[birthYearIdx]?.trim();
 
-      // Parse multiple children per row
-      const childNames = childFirstName.split(';').map(n => n.trim()).filter(Boolean);
-      const years = birthYears.split(';').map(y => y.trim()).filter(Boolean);
-
-      childNames.forEach((childName, idx) => {
-        const year = years[idx] || years[0];
-        const childRaceConfig = raceConfigs.find(rc =>
-          !rc.isParent && matchesYear(year, rc.yearMatch)
-        );
-
-        if (childRaceConfig) {
-          bibs.push({
-            bibNumber,
-            firstName: childName,
-            lastName: familyName,
-            raceConfig: childRaceConfig,
-          });
+        if (!childFirstName || !birthYears) {
+          return;
         }
+
+        // Parse multiple children per row
+        const childNames = childFirstName.split(';').map(n => n.trim()).filter(Boolean);
+        const years = birthYears.split(';').map(y => y.trim()).filter(Boolean);
+
+        childNames.forEach((childName, idx) => {
+          const year = years[idx] || years[0];
+          const childRaceConfig = raceConfigs.find(rc =>
+            !rc.isParent && matchesYear(year, rc.yearMatch)
+          );
+
+          if (childRaceConfig) {
+            bibs.push({
+              bibNumber,
+              firstName: childName,
+              lastName: familyName,
+              raceConfig: childRaceConfig,
+              category,
+            });
+          }
+        });
       });
-    });
+    };
+
+    // Process children from all three child column sets
+    processChildrenFromColumns(mapping.childFirstName, mapping.birthYear, 'child1');
+    processChildrenFromColumns(mapping.child2FirstName, mapping.child2BirthYear, 'child2');
+    processChildrenFromColumns(mapping.child3FirstName, mapping.child3BirthYear, 'child3');
 
     // Add adult 1 bib (only once per order)
     bibs.push({
@@ -81,6 +91,7 @@ export function processCSVToBibs(
       firstName: adult1FirstName,
       lastName: familyName,
       raceConfig: parentConfig,
+      category: 'adult',
     });
 
     // Add adult 2 if relay
@@ -90,6 +101,7 @@ export function processCSVToBibs(
         firstName: adult2FirstName,
         lastName: familyName,
         raceConfig: parentConfig,
+        category: 'adult',
       });
     }
 
