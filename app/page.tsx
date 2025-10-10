@@ -1,8 +1,8 @@
 'use client';
 
 import { processCSVToBibs } from '@/lib/bib-processor';
-import { ColumnMapping, ParsedRow, RaceConfig } from '@/types';
-import { Calendar, Palette, Printer, RotateCcw, Ruler, User, Users } from 'lucide-react';
+import { BibData, ColumnMapping, ParsedRow, RaceConfig } from '@/types';
+import { ArrowLeft, ArrowRight, Baby, Check, FileDigit, Menu, Palette, Printer, RotateCcw, Trophy, User, Users } from 'lucide-react';
 import Papa from 'papaparse';
 import { useEffect, useRef, useState } from 'react';
 
@@ -20,8 +20,11 @@ export default function Home() {
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<ColumnMapping>({});
   const [raceConfigs, setRaceConfigs] = useState<RaceConfig[]>(DEFAULT_RACE_CONFIGS);
-  const [step, setStep] = useState<'upload' | 'map' | 'config' | 'select'>('upload');
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [fileName, setFileName] = useState<string>('');
+  const [allBibs, setAllBibs] = useState<BibData[]>([]);
+  const [selectedBibs, setSelectedBibs] = useState<Set<number>>(new Set());
+  const [showConfigMenu, setShowConfigMenu] = useState(false);
   const isFirstRender = useRef(true);
 
   // Load persisted data on mount
@@ -45,11 +48,14 @@ export default function Home() {
 
     if (savedCsvData && savedHeaders && savedMapping) {
       try {
-        setCsvData(JSON.parse(savedCsvData));
-        setHeaders(JSON.parse(savedHeaders));
-        setMapping(JSON.parse(savedMapping));
+        const parsedCsvData = JSON.parse(savedCsvData);
+        const parsedHeaders = JSON.parse(savedHeaders);
+        const parsedMapping = JSON.parse(savedMapping);
+        setCsvData(parsedCsvData);
+        setHeaders(parsedHeaders);
+        setMapping(parsedMapping);
         setFileName(savedFileName || '');
-        setStep('map');
+        setStep(2);
       } catch (error) {
         console.error('Error loading CSV data:', error);
       }
@@ -67,12 +73,15 @@ export default function Home() {
     }
   }, [raceConfigs]);
 
-  // Redirect to select page when step is select
+  // Generate bibs when we have CSV, mapping, and configs
   useEffect(() => {
-    if (step === 'select') {
-      window.location.href = '/select';
+    if (csvData.length > 0 && Object.keys(mapping).length > 0 && raceConfigs.length > 0) {
+      const bibs = processCSVToBibs(csvData, mapping, raceConfigs);
+      setAllBibs(bibs);
+      // Select all by default
+      setSelectedBibs(new Set(bibs.map((_, index) => index)));
     }
-  }, [step]);
+  }, [csvData, mapping, raceConfigs]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -139,16 +148,83 @@ export default function Home() {
           localStorage.setItem('csv-mapping', JSON.stringify(autoMapping));
           localStorage.setItem('csv-filename', file.name);
 
-          setStep('map');
+          // Check if all required columns are mapped
+          const allMapped = autoMapping.orderRef !== undefined &&
+                          autoMapping.familyName !== undefined &&
+                          autoMapping.birthYear !== undefined;
+
+          setStep(allMapped ? 3 : 2);
         }
       },
     });
   };
 
   const handleGenerateBibs = () => {
-    const bibs = processCSVToBibs(csvData, mapping, raceConfigs);
-    sessionStorage.setItem('bibs', JSON.stringify(bibs));
+    const selectedBibData = allBibs.filter((_, index) => selectedBibs.has(index));
+    sessionStorage.setItem('selected-bibs', JSON.stringify(selectedBibData));
     window.open('/print', '_blank');
+  };
+
+  const toggleBibSelection = (bibIndex: number) => {
+    const newSelection = new Set(selectedBibs);
+    if (newSelection.has(bibIndex)) {
+      newSelection.delete(bibIndex);
+    } else {
+      newSelection.add(bibIndex);
+    }
+    setSelectedBibs(newSelection);
+  };
+
+  const toggleCategory = (category: string) => {
+    const categoryIndices = allBibs
+      .map((bib, index) => ({ bib, index }))
+      .filter(({ bib }) => {
+        if (category === 'adults') return bib.category === 'adult';
+        if (category === 'child1') return bib.category === 'child1';
+        if (category === 'child2') return bib.category === 'child2';
+        if (category === 'child3') return bib.category === 'child3';
+        return false;
+      })
+      .map(({ index }) => index);
+
+    const newSelection = new Set(selectedBibs);
+    const allCategorySelected = categoryIndices.every(index => newSelection.has(index));
+
+    if (allCategorySelected) {
+      categoryIndices.forEach(index => newSelection.delete(index));
+    } else {
+      categoryIndices.forEach(index => newSelection.add(index));
+    }
+
+    setSelectedBibs(newSelection);
+  };
+
+  const toggleAll = () => {
+    if (selectedBibs.size === allBibs.length) {
+      setSelectedBibs(new Set());
+    } else {
+      setSelectedBibs(new Set(allBibs.map((_, index) => index)));
+    }
+  };
+
+  const getCategoryIcon = (category?: string) => {
+    switch (category) {
+      case 'adult': return <User size={16} />;
+      case 'child1': return <Baby size={16} />;
+      case 'child2': return <Baby size={16} />;
+      case 'child3': return <Baby size={16} />;
+      default: return <User size={16} />;
+    }
+  };
+
+  const getCategoryLabel = (category?: string) => {
+    switch (category) {
+      case 'adult': return 'Adulte';
+      case 'child1': return 'Enfant 1';
+      case 'child2': return 'Enfant 2';
+      case 'child3': return 'Enfant 3';
+      default: return 'Inconnu';
+    }
   };
 
   const handleStartOver = () => {
@@ -160,108 +236,172 @@ export default function Home() {
     setHeaders([]);
     setMapping({});
     setFileName('');
-    setStep('upload');
+    setAllBibs([]);
+    setSelectedBibs(new Set());
+    setStep(1);
   };
+
+  const canGenerate = csvData.length > 0 && Object.keys(mapping).length > 0;
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '40px 20px' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', fontFamily: 'system-ui' }}>
-        <div style={{ background: 'white', borderRadius: '16px', padding: '40px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+        <div style={{ background: 'white', borderRadius: '16px', padding: '40px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', position: 'relative' }}>
+          {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h1 style={{ fontSize: '20px', fontWeight: '700', color: '#1a202c', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-              <User size={20} />
+              <FileDigit size={24} />
               Générateur de Dossards
             </h1>
-            <a
-              href="/template"
-              style={{
-                padding: '8px 16px',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#667eea',
-                textDecoration: 'none',
-                border: '2px solid #667eea',
-                borderRadius: '8px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s'
-              }}
-            >
-              <Palette size={16} />
-              Designer de Dossard
-            </a>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              {canGenerate && (
+                <button
+                  onClick={handleGenerateBibs}
+                  disabled={selectedBibs.size === 0}
+                  style={{
+                    padding: '10px 24px',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    cursor: selectedBibs.size === 0 ? 'not-allowed' : 'pointer',
+                    background: selectedBibs.size === 0 ? '#cbd5e0' : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    boxShadow: selectedBibs.size === 0 ? 'none' : '0 4px 12px rgba(34, 197, 94, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    opacity: selectedBibs.size === 0 ? 0.6 : 1
+                  }}
+                >
+                  <Printer size={16} />
+                  Générer {selectedBibs.size > 0 && `${selectedBibs.size} dossard${selectedBibs.size !== 1 ? 's' : ''}`}
+                </button>
+              )}
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setShowConfigMenu(!showConfigMenu)}
+                  style={{
+                    padding: '10px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#667eea',
+                    background: 'white',
+                    border: '2px solid #667eea',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <Menu size={18} />
+                </button>
+                {showConfigMenu && (
+                  <div style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: '50px',
+                    background: 'white',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                    minWidth: '240px',
+                    zIndex: 1000
+                  }}>
+                    <a
+                      href="/template"
+                      style={{
+                        padding: '12px 16px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#4a5568',
+                        textDecoration: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        borderBottom: '1px solid #e2e8f0'
+                      }}
+                    >
+                      <Palette size={16} />
+                      Designer de Dossard
+                    </a>
+                    <a
+                      href="/config"
+                      style={{
+                        padding: '12px 16px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#4a5568',
+                        textDecoration: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <Trophy size={16} />
+                      Configuration Courses
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
-          {step === 'upload' && (
-            <div>
-              {/* Progress indicator */}
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '30px', gap: '8px' }}>
-                <button onClick={() => setStep('upload')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <div style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    background: '#667eea',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold',
-                    fontSize: '13px'
-                  }}>1</div>
-                  <span style={{ color: '#667eea', fontWeight: '600', fontSize: '14px' }}>Import</span>
-                </button>
-                <div style={{ width: '40px', height: '2px', background: '#cbd5e0' }} />
-                <button onClick={() => csvData.length > 0 && setStep('map')} disabled={csvData.length === 0} style={{ background: 'none', border: 'none', cursor: csvData.length > 0 ? 'pointer' : 'not-allowed', padding: 0, display: 'flex', alignItems: 'center', gap: '6px', opacity: csvData.length > 0 ? 1 : 0.5 }}>
-                  <div style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    background: '#cbd5e0',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold',
-                    fontSize: '13px'
-                  }}>2</div>
-                  <span style={{ color: '#cbd5e0', fontWeight: '600', fontSize: '14px' }}>Colonnes</span>
-                </button>
-                <div style={{ width: '40px', height: '2px', background: '#cbd5e0' }} />
-                <button onClick={() => csvData.length > 0 && setStep('config')} disabled={csvData.length === 0} style={{ background: 'none', border: 'none', cursor: csvData.length > 0 ? 'pointer' : 'not-allowed', padding: 0, display: 'flex', alignItems: 'center', gap: '6px', opacity: csvData.length > 0 ? 1 : 0.5 }}>
-                  <div style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    background: '#cbd5e0',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold',
-                    fontSize: '13px'
-                  }}>3</div>
-                  <span style={{ color: '#cbd5e0', fontWeight: '600', fontSize: '14px' }}>Courses</span>
-                </button>
-                <div style={{ width: '40px', height: '2px', background: '#cbd5e0' }} />
-                <button onClick={() => csvData.length > 0 && setStep('select')} disabled={csvData.length === 0} style={{ background: 'none', border: 'none', cursor: csvData.length > 0 ? 'pointer' : 'not-allowed', padding: 0, display: 'flex', alignItems: 'center', gap: '6px', opacity: csvData.length > 0 ? 1 : 0.5 }}>
-                  <div style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    background: '#cbd5e0',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold',
-                    fontSize: '13px'
-                  }}>4</div>
-                  <span style={{ color: '#cbd5e0', fontWeight: '600', fontSize: '14px' }}>Sélection</span>
-                </button>
-              </div>
+          {/* Stepper */}
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '30px', gap: '8px' }}>
+            <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: step === 1 ? '#667eea' : (csvData.length > 0 ? '#22c55e' : '#cbd5e0'),
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                fontSize: '13px'
+              }}>1</div>
+              <span style={{ color: step === 1 ? '#667eea' : (csvData.length > 0 ? '#22c55e' : '#cbd5e0'), fontWeight: '600', fontSize: '14px' }}>Import CSV</span>
+            </button>
+            <div style={{ width: '40px', height: '2px', background: csvData.length > 0 ? '#22c55e' : '#cbd5e0' }} />
+            <button onClick={() => csvData.length > 0 && setStep(2)} disabled={csvData.length === 0} style={{ background: 'none', border: 'none', cursor: csvData.length > 0 ? 'pointer' : 'not-allowed', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: step === 2 ? '#667eea' : (canGenerate ? '#22c55e' : '#cbd5e0'),
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                fontSize: '13px'
+              }}>2</div>
+              <span style={{ color: step === 2 ? '#667eea' : (canGenerate ? '#22c55e' : '#cbd5e0'), fontWeight: '600', fontSize: '14px' }}>Colonnes</span>
+            </button>
+            <div style={{ width: '40px', height: '2px', background: canGenerate ? '#22c55e' : '#cbd5e0' }} />
+            <button onClick={() => canGenerate && setStep(3)} disabled={!canGenerate} style={{ background: 'none', border: 'none', cursor: canGenerate ? 'pointer' : 'not-allowed', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: step === 3 ? '#667eea' : '#cbd5e0',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                fontSize: '13px'
+              }}>3</div>
+              <span style={{ color: step === 3 ? '#667eea' : '#cbd5e0', fontWeight: '600', fontSize: '14px' }}>Sélection</span>
+            </button>
+          </div>
 
+          {/* Step 1: Upload CSV */}
+          {step === 1 && (
+            <div>
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <div style={{
                   border: '3px dashed #cbd5e0',
@@ -272,525 +412,410 @@ export default function Home() {
                 }}>
                   <div style={{ fontSize: '48px', marginBottom: '16px' }}>📄</div>
                   <p style={{ color: '#718096', marginBottom: '20px', fontSize: '14px' }}>Déposez votre fichier ou cliquez pour sélectionner</p>
-                <label style={{
-                  padding: '12px 32px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  background: '#667eea',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  display: 'inline-block',
-                  transition: 'all 0.2s'
-                }}>
-                  Choisir un fichier
-                  <input type="file" accept=".csv" onChange={handleFileUpload} style={{ display: 'none' }} />
-                </label>
-                {fileName && (
-                  <div style={{ marginTop: '20px', color: '#22c55e', fontWeight: '600' }}>
-                    ✓ {fileName}
-                  </div>
+                  <label style={{
+                    padding: '12px 32px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    background: '#667eea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    display: 'inline-block',
+                    transition: 'all 0.2s'
+                  }}>
+                    Choisir un fichier
+                    <input type="file" accept=".csv" onChange={handleFileUpload} style={{ display: 'none' }} />
+                  </label>
+                  {fileName && (
+                    <div style={{ marginTop: '20px', color: '#22c55e', fontWeight: '600' }}>
+                      ✓ {fileName}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom navigation */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px', paddingTop: '20px', borderTop: '2px solid #f7fafc' }}>
+                <button
+                  onClick={handleStartOver}
+                  disabled={csvData.length === 0}
+                  style={{
+                    padding: '10px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: csvData.length === 0 ? 'not-allowed' : 'pointer',
+                    border: '2px solid #cbd5e0',
+                    borderRadius: '8px',
+                    backgroundColor: 'white',
+                    color: '#4a5568',
+                    opacity: csvData.length === 0 ? 0.5 : 1
+                  }}
+                >
+                  <RotateCcw size={16} /> Recommencer
+                </button>
+                {csvData.length > 0 ? (
+                  <button
+                    onClick={() => setStep(2)}
+                    style={{
+                      padding: '10px 20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      background: '#667eea',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px'
+                    }}
+                  >
+                    Suivant <ArrowRight size={16} />
+                  </button>
+                ) : (
+                  <div style={{ width: '100px' }} />
                 )}
               </div>
             </div>
+          )}
+
+          {/* Step 2: Map columns */}
+          {step === 2 && (
+            <div>
+              <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                <div style={{ background: '#f7fafc', padding: '16px', borderRadius: '8px' }}>
+                  {[
+                    { key: 'orderRef', label: 'Référence commande', icon: '🔢' },
+                    { key: 'familyName', label: 'Nom de famille', icon: '👨‍👩‍👧‍👦' },
+                    { key: 'adultFirstName', label: 'Prénom Adulte 1', icon: '👤' },
+                    { key: 'childFirstName', label: 'Prénom de l\'enfant', icon: '🧒' },
+                    { key: 'birthYear', label: 'Année de naissance', icon: '📅' },
+                    { key: 'child2FirstName', label: 'Prénom de l\'enfant 2', icon: '👶' },
+                    { key: 'child2BirthYear', label: 'Année de naissance Enfant 2', icon: '📅' },
+                    { key: 'child3FirstName', label: 'Prénom de l\'enfant 3', icon: '👶' },
+                    { key: 'child3BirthYear', label: 'Année de naissance Enfant 3', icon: '📅' },
+                    { key: 'relay', label: 'Relais Adulte', icon: '🔄' },
+                    { key: 'adult2FirstName', label: 'Prénom Adulte 2', icon: '👥' },
+                  ].map(({ key, label, icon }, idx, arr) => (
+                    <div key={key} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      paddingBottom: idx < arr.length - 1 ? '10px' : '0',
+                      marginBottom: idx < arr.length - 1 ? '10px' : '0',
+                      borderBottom: idx < arr.length - 1 ? '1px solid #e2e8f0' : 'none'
+                    }}>
+                      <span style={{ fontSize: '20px', flexShrink: 0 }}>{icon}</span>
+                      <label style={{ fontWeight: '600', color: '#2d3748', fontSize: '14px', minWidth: '160px', flexShrink: 0 }}>{label}</label>
+                      <select
+                        value={mapping[key as keyof ColumnMapping] ?? ''}
+                        onChange={(e) => {
+                          const newMapping = { ...mapping, [key]: e.target.value ? parseInt(e.target.value) : undefined };
+                          setMapping(newMapping);
+                          localStorage.setItem('csv-mapping', JSON.stringify(newMapping));
+                        }}
+                        style={{
+                          padding: '6px 10px',
+                          fontSize: '14px',
+                          borderRadius: '6px',
+                          border: '2px solid #e2e8f0',
+                          flex: 1,
+                          minWidth: 0,
+                          background: 'white'
+                        }}
+                      >
+                        <option value="">-- Sélectionner --</option>
+                        {headers.map((header, idx) => (
+                          <option key={idx} value={idx}>{header}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bottom navigation */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px', paddingTop: '20px', borderTop: '2px solid #f7fafc' }}>
+                <button
+                  onClick={() => setStep(1)}
+                  style={{
+                    padding: '10px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    border: '2px solid #667eea',
+                    borderRadius: '8px',
+                    backgroundColor: 'white',
+                    color: '#667eea'
+                  }}
+                >
+                  <ArrowLeft size={16} /> Précédent
+                </button>
+                <button
+                  onClick={() => setStep(3)}
+                  style={{
+                    padding: '10px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    background: '#667eea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px'
+                  }}
+                >
+                  Suivant <ArrowRight size={16} />
+                </button>
+              </div>
             </div>
           )}
 
-      {step === 'map' && (
-        <div>
-          {/* Progress indicator */}
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '24px', gap: '8px' }}>
-            <button onClick={() => setStep('upload')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: '#22c55e',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                fontSize: '13px'
-              }}>1</div>
-              <span style={{ color: '#22c55e', fontWeight: '600', fontSize: '14px' }}>Import</span>
-            </button>
-            <div style={{ width: '40px', height: '2px', background: '#22c55e' }} />
-            <button onClick={() => setStep('map')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: '#667eea',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                fontSize: '13px'
-              }}>2</div>
-              <span style={{ color: '#667eea', fontWeight: '600', fontSize: '14px' }}>Colonnes</span>
-            </button>
-            <div style={{ width: '40px', height: '2px', background: '#cbd5e0' }} />
-            <button onClick={() => setStep('config')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: '#cbd5e0',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                fontSize: '13px'
-              }}>3</div>
-              <span style={{ color: '#cbd5e0', fontWeight: '600', fontSize: '14px' }}>Courses</span>
-            </button>
-            <div style={{ width: '40px', height: '2px', background: '#cbd5e0' }} />
-            <button onClick={() => setStep('select')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: '#cbd5e0',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                fontSize: '13px'
-              }}>4</div>
-              <span style={{ color: '#cbd5e0', fontWeight: '600', fontSize: '14px' }}>Sélection</span>
-            </button>
-          </div>
-
-          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <button
-                onClick={handleStartOver}
-                style={{
-                  padding: '10px 20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  border: '2px solid #cbd5e0',
-                  borderRadius: '8px',
-                  backgroundColor: 'white',
-                  color: '#4a5568'
-                }}
-              >
-                <RotateCcw size={16} /> Recommencer
-              </button>
-              <button
-                onClick={() => setStep('select')}
-                style={{
-                  padding: '10px 24px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  background: '#667eea',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                Sélectionner dossards
-              </button>
-              <div style={{ flex: 1 }} />
-              <button
-                onClick={handleGenerateBibs}
-                style={{
-                  padding: '10px 24px',
-                  fontSize: '14px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(34, 197, 94, 0.4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <Printer size={16} />
-                Générer les dossards
-              </button>
-            </div>
-
-          <div style={{ background: '#f7fafc', padding: '16px', borderRadius: '8px' }}>
-            {[
-              { key: 'orderRef', label: 'Référence commande', icon: '🔢' },
-              { key: 'familyName', label: 'Nom de famille', icon: '👨‍👩‍👧‍👦' },
-              { key: 'adultFirstName', label: 'Prénom Adulte 1', icon: '👤' },
-              { key: 'childFirstName', label: 'Prénom de l\'enfant', icon: '🧒' },
-              { key: 'birthYear', label: 'Année de naissance', icon: '📅' },
-              { key: 'child2FirstName', label: 'Prénom de l\'enfant 2', icon: '👶' },
-              { key: 'child2BirthYear', label: 'Année de naissance Enfant 2', icon: '📅' },
-              { key: 'child3FirstName', label: 'Prénom de l\'enfant 3', icon: '👶' },
-              { key: 'child3BirthYear', label: 'Année de naissance Enfant 3', icon: '📅' },
-              { key: 'relay', label: 'Relais Adulte', icon: '🔄' },
-              { key: 'adult2FirstName', label: 'Prénom Adulte 2', icon: '👥' },
-            ].map(({ key, label, icon }, idx, arr) => (
-              <div key={key} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                paddingBottom: idx < arr.length - 1 ? '10px' : '0',
-                marginBottom: idx < arr.length - 1 ? '10px' : '0',
-                borderBottom: idx < arr.length - 1 ? '1px solid #e2e8f0' : 'none'
-              }}>
-                <span style={{ fontSize: '20px', flexShrink: 0 }}>{icon}</span>
-                <label style={{ fontWeight: '600', color: '#2d3748', fontSize: '14px', minWidth: '160px', flexShrink: 0 }}>{label}</label>
-                <select
-                  value={mapping[key as keyof ColumnMapping] ?? ''}
-                  onChange={(e) => {
-                    const newMapping = { ...mapping, [key]: e.target.value ? parseInt(e.target.value) : undefined };
-                    setMapping(newMapping);
-                    localStorage.setItem('csv-mapping', JSON.stringify(newMapping));
-                  }}
+          {/* Step 3: Select bibs */}
+          {step === 3 && (
+            <div>
+              {/* Selection controls */}
+              <div style={{ marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={toggleAll}
                   style={{
-                    padding: '6px 10px',
+                    padding: '10px 20px',
                     fontSize: '14px',
-                    borderRadius: '6px',
-                    border: '2px solid #e2e8f0',
-                    flex: 1,
-                    minWidth: 0,
-                    background: 'white'
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    background: selectedBibs.size === allBibs.length ? '#22c55e' : '#667eea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
                   }}
                 >
-                  <option value="">-- Sélectionner --</option>
-                  {headers.map((header, idx) => (
-                    <option key={idx} value={idx}>{header}</option>
-                  ))}
-                </select>
-              </div>
-            ))}
-          </div>
-          </div>
-        </div>
-      )}
+                  <Check size={16} />
+                  {selectedBibs.size === allBibs.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+                </button>
 
-      {step === 'select' && (
-        <div>
-          {/* Progress indicator */}
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '24px', gap: '8px' }}>
-            <button onClick={() => setStep('upload')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: '#22c55e',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                fontSize: '13px'
-              }}>1</div>
-              <span style={{ color: '#22c55e', fontWeight: '600', fontSize: '14px' }}>Import</span>
-            </button>
-            <div style={{ width: '40px', height: '2px', background: '#22c55e' }} />
-            <button onClick={() => setStep('map')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: '#22c55e',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                fontSize: '13px'
-              }}>2</div>
-              <span style={{ color: '#22c55e', fontWeight: '600', fontSize: '14px' }}>Colonnes</span>
-            </button>
-            <div style={{ width: '40px', height: '2px', background: '#22c55e' }} />
-            <button onClick={() => setStep('config')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: '#22c55e',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                fontSize: '13px'
-              }}>3</div>
-              <span style={{ color: '#22c55e', fontWeight: '600', fontSize: '14px' }}>Courses</span>
-            </button>
-            <div style={{ width: '40px', height: '2px', background: '#22c55e' }} />
-            <button onClick={() => setStep('select')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: '#667eea',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                fontSize: '13px'
-              }}>4</div>
-              <span style={{ color: '#667eea', fontWeight: '600', fontSize: '14px' }}>Sélection</span>
-            </button>
-          </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {(() => {
+                    const isAdultsSelected = allBibs
+                      .map((bib, index) => ({ bib, index }))
+                      .filter(({ bib }) => bib.category === 'adult')
+                      .every(({ index }) => selectedBibs.has(index));
 
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚡</div>
-            <p style={{ color: '#718096', marginBottom: '20px', fontSize: '16px' }}>
-              Redirection vers la page de sélection...
-            </p>
-          </div>
-        </div>
-      )}
+                    return (
+                      <button
+                        onClick={() => toggleCategory('adults')}
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          background: isAdultsSelected ? '#22c55e' : '#f7fafc',
+                          color: isAdultsSelected ? 'white' : '#4a5568',
+                          border: `2px solid ${isAdultsSelected ? '#22c55e' : '#e2e8f0'}`,
+                          borderRadius: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Users size={14} />
+                        Adultes
+                      </button>
+                    );
+                  })()}
+                  {(() => {
+                    const isChild1Selected = allBibs
+                      .map((bib, index) => ({ bib, index }))
+                      .filter(({ bib }) => bib.category === 'child1')
+                      .every(({ index }) => selectedBibs.has(index));
 
-      {step === 'config' && (
-        <div>
-          {/* Progress indicator */}
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '24px', gap: '8px' }}>
-            <button onClick={() => setStep('upload')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: '#22c55e',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                fontSize: '13px'
-              }}>1</div>
-              <span style={{ color: '#22c55e', fontWeight: '600', fontSize: '14px' }}>Import</span>
-            </button>
-            <div style={{ width: '40px', height: '2px', background: '#22c55e' }} />
-            <button onClick={() => setStep('map')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: '#22c55e',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                fontSize: '13px'
-              }}>2</div>
-              <span style={{ color: '#22c55e', fontWeight: '600', fontSize: '14px' }}>Colonnes</span>
-            </button>
-            <div style={{ width: '40px', height: '2px', background: '#22c55e' }} />
-            <button onClick={() => setStep('config')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: '#667eea',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                fontSize: '13px'
-              }}>3</div>
-              <span style={{ color: '#667eea', fontWeight: '600', fontSize: '14px' }}>Courses</span>
-            </button>
-            <div style={{ width: '40px', height: '2px', background: '#cbd5e0' }} />
-            <button onClick={() => setStep('select')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: '#cbd5e0',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                fontSize: '13px'
-              }}>4</div>
-              <span style={{ color: '#cbd5e0', fontWeight: '600', fontSize: '14px' }}>Sélection</span>
-            </button>
-          </div>
+                    return (
+                      <button
+                        onClick={() => toggleCategory('child1')}
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          background: isChild1Selected ? '#22c55e' : '#f7fafc',
+                          color: isChild1Selected ? 'white' : '#4a5568',
+                          border: `2px solid ${isChild1Selected ? '#22c55e' : '#e2e8f0'}`,
+                          borderRadius: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Baby size={14} />
+                        Enfant 1
+                      </button>
+                    );
+                  })()}
+                  {(() => {
+                    const isChild2Selected = allBibs
+                      .map((bib, index) => ({ bib, index }))
+                      .filter(({ bib }) => bib.category === 'child2')
+                      .every(({ index }) => selectedBibs.has(index));
 
-          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <button
-                onClick={handleStartOver}
-                style={{
-                  padding: '10px 20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  border: '2px solid #cbd5e0',
-                  borderRadius: '8px',
-                  backgroundColor: 'white',
-                  color: '#4a5568'
-                }}
-              >
-                <RotateCcw size={16} /> Recommencer
-              </button>
-              <div style={{ flex: 1 }} />
-              <button
-                onClick={() => setStep('select')}
-                style={{
-                  padding: '10px 24px',
-                  fontSize: '14px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(34, 197, 94, 0.4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <Printer size={16} />
-                Sélectionner dossards
-              </button>
-            </div>
+                    return (
+                      <button
+                        onClick={() => toggleCategory('child2')}
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          background: isChild2Selected ? '#22c55e' : '#f7fafc',
+                          color: isChild2Selected ? 'white' : '#4a5568',
+                          border: `2px solid ${isChild2Selected ? '#22c55e' : '#e2e8f0'}`,
+                          borderRadius: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Baby size={14} />
+                        Enfant 2
+                      </button>
+                    );
+                  })()}
+                  {(() => {
+                    const isChild3Selected = allBibs
+                      .map((bib, index) => ({ bib, index }))
+                      .filter(({ bib }) => bib.category === 'child3')
+                      .every(({ index }) => selectedBibs.has(index));
 
-          <div style={{ display: 'grid', gap: '8px' }}>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '180px 180px 140px 120px',
-              gap: '12px',
-              fontWeight: '600',
-              padding: '10px',
-              paddingBottom: '12px',
-              borderBottom: '3px solid #e2e8f0',
-              color: '#4a5568',
-              fontSize: '14px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Ruler size={16} />
-                Distance
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Calendar size={16} />
-                Année
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Palette size={16} />
-                Couleur
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Users size={16} />
-                Adulte?
-              </div>
-            </div>
-            {raceConfigs.map((config, idx) => (
-              <div key={config.id} style={{
-                display: 'grid',
-                gridTemplateColumns: '180px 180px 140px 120px',
-                gap: '12px',
-                alignItems: 'center',
-                background: '#f7fafc',
-                padding: '10px',
-                borderRadius: '6px'
-              }}>
-                <input
-                  value={config.label}
-                  onChange={(e) => {
-                    const updated = [...raceConfigs];
-                    updated[idx].label = e.target.value;
-                    setRaceConfigs(updated);
-                  }}
-                  placeholder="ex: 900m"
-                  style={{
-                    padding: '8px',
-                    fontSize: '14px',
-                    borderRadius: '6px',
-                    border: '2px solid #e2e8f0',
-                    background: 'white',
-                    fontWeight: '600'
-                  }}
-                />
-                <input
-                  value={config.yearMatch}
-                  onChange={(e) => {
-                    const updated = [...raceConfigs];
-                    updated[idx].yearMatch = e.target.value;
-                    setRaceConfigs(updated);
-                  }}
-                  placeholder="ex: 2020"
-                  style={{
-                    padding: '8px',
-                    fontSize: '14px',
-                    borderRadius: '6px',
-                    border: '2px solid #e2e8f0',
-                    background: 'white'
-                  }}
-                />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <input
-                    type="color"
-                    value={config.color}
-                    onChange={(e) => {
-                      const updated = [...raceConfigs];
-                      updated[idx].color = e.target.value;
-                      setRaceConfigs(updated);
-                    }}
-                    style={{
-                      width: '30px',
-                      height: '36px',
-                      border: '2px solid #e2e8f0',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      flex: 1
-                    }}
-                  />
+                    return (
+                      <button
+                        onClick={() => toggleCategory('child3')}
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          background: isChild3Selected ? '#22c55e' : '#f7fafc',
+                          color: isChild3Selected ? 'white' : '#4a5568',
+                          border: `2px solid ${isChild3Selected ? '#22c55e' : '#e2e8f0'}`,
+                          borderRadius: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Baby size={14} />
+                        Enfant 3
+                      </button>
+                    );
+                  })()}
                 </div>
-                <label style={{
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  fontWeight: '600'
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={config.isParent || false}
-                    onChange={(e) => {
-                      const updated = [...raceConfigs];
-                      updated[idx].isParent = e.target.checked;
-                      setRaceConfigs(updated);
-                    }}
-                    style={{
-                      marginRight: '8px',
-                      cursor: 'pointer',
-                      width: '18px',
-                      height: '18px'
-                    }}
-                  />
-                  Oui
-                </label>
               </div>
-            ))}
-          </div>
-          </div>
-        </div>
-      )}
+
+              {/* Bib list */}
+              <div style={{ maxHeight: '500px', overflowY: 'auto', border: '2px solid #f7fafc', borderRadius: '8px' }}>
+                {allBibs.map((bib, index) => (
+                  <div key={index} style={{
+                    borderBottom: '1px solid #e2e8f0',
+                    background: selectedBibs.has(index) ? '#f0f9ff' : 'white',
+                    transition: 'background 0.2s'
+                  }}>
+                    <div style={{
+                      padding: '12px 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      cursor: 'pointer'
+                    }} onClick={() => toggleBibSelection(index)}>
+                      <input
+                        type="checkbox"
+                        checked={selectedBibs.has(index)}
+                        onChange={() => {}} // Handled by onClick
+                        style={{
+                          width: '18px',
+                          height: '18px',
+                          cursor: 'pointer'
+                        }}
+                      />
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        background: '#667eea',
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                        fontSize: '14px'
+                      }}>
+                        {bib.bibNumber}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                          {getCategoryIcon(bib.category)}
+                          <span style={{ fontWeight: '600', color: '#2d3748', fontSize: '15px' }}>
+                            {bib.firstName} {bib.lastName.toUpperCase()}
+                          </span>
+                          <span style={{
+                            background: bib.raceConfig.color,
+                            color: 'white',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: '600'
+                          }}>
+                            {getCategoryLabel(bib.category)}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#4a5568' }}>
+                          {bib.raceConfig.label}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {allBibs.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#718096' }}>
+                  Aucun dossard trouvé.
+                </div>
+              )}
+
+              {/* Bottom navigation */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px', paddingTop: '20px', borderTop: '2px solid #f7fafc' }}>
+                <button
+                  onClick={() => setStep(2)}
+                  style={{
+                    padding: '10px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    border: '2px solid #667eea',
+                    borderRadius: '8px',
+                    backgroundColor: 'white',
+                    color: '#667eea'
+                  }}
+                >
+                  <ArrowLeft size={16} /> Précédent
+                </button>
+                <div style={{ width: '100px' }} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
