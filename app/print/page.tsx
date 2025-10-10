@@ -29,7 +29,7 @@ export default function PrintPage() {
     <div>
       {bibPairs.map((pair, pairIdx) => (
         <div key={pairIdx} style={{
-          pageBreakAfter: 'always',
+          pageBreakAfter: pairIdx < bibPairs.length - 1 ? 'always' : 'auto',
           pageBreakInside: 'avoid',
           width: '210mm',
           height: '297mm',
