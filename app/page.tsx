@@ -2,17 +2,17 @@
 
 import { processCSVToBibs } from '@/lib/bib-processor';
 import { BibData, ColumnMapping, ParsedRow, RaceConfig } from '@/types';
-import { ArrowLeft, ArrowRight, Baby, Check, FileDigit, Menu, Palette, Printer, RotateCcw, Trophy, User, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Baby, Check, FileDigit, Menu, Palette, Printer, RotateCcw, Search, Trophy, User, Users } from 'lucide-react';
 import Papa from 'papaparse';
 import { useEffect, useRef, useState } from 'react';
 
 const DEFAULT_RACE_CONFIGS: RaceConfig[] = [
-  { id: '2016', label: '900m', yearMatch: '2016 et avant', color: '#3b82f6', isParent: false },
-  { id: '2017', label: '600m', yearMatch: '2017', color: '#eab308', isParent: false },
-  { id: '2018', label: '600m', yearMatch: '2018', color: '#eab308', isParent: false },
-  { id: '2019', label: '300m', yearMatch: '2019', color: '#22c55e', isParent: false },
-  { id: '2020', label: '300m', yearMatch: '2020', color: '#22c55e', isParent: false },
-  { id: 'parent', label: '2.5km / 5km', yearMatch: 'parent', color: '#1f2937', isParent: true },
+  { id: '2016', label: '900m', yearMatch: '2016 et avant', color: '#3baff7', isParent: false },
+  { id: '2017', label: '600m', yearMatch: '2017', color: '#e77f08', isParent: false },
+  { id: '2018', label: '600m', yearMatch: '2018', color: '#e77f0b', isParent: false },
+  { id: '2019', label: '300m', yearMatch: '2019', color: '#26b55b', isParent: false },
+  { id: '2020', label: '300m', yearMatch: '2020', color: '#25b65b', isParent: false },
+  { id: 'parent', label: '2.5km / 5km', yearMatch: 'parent', color: '#7b37cd', isParent: true },
 ];
 
 export default function Home() {
@@ -25,7 +25,92 @@ export default function Home() {
   const [allBibs, setAllBibs] = useState<BibData[]>([]);
   const [selectedBibs, setSelectedBibs] = useState<Set<number>>(new Set());
   const [showConfigMenu, setShowConfigMenu] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [cutoffDate, setCutoffDate] = useState<Date | null>(null);
+  const [startBibNumber, setStartBibNumber] = useState<number | null>(null);
   const isFirstRender = useRef(true);
+
+  // Apply date filter and renumber
+  // When date filter is active: show only new bibs with renumbered bibs starting after printed ones
+  // When no date filter: show all bibs with original numbers (category/search filters work normally)
+  let displayBibs = allBibs;
+  let lastPrintedBib: BibData | null = null;
+  let defaultNextBibNumber = 1;
+
+  if (cutoffDate) {
+    console.log('Cutoff date:', cutoffDate);
+    console.log('All bibs with dates:', allBibs.filter(b => b.registrationDate).map(b => ({
+      name: `${b.firstName} ${b.lastName}`,
+      date: b.registrationDate,
+      orderRef: b.orderRef
+    })));
+
+    // Get unique order refs before cutoff
+    const ordersBefore = new Set<string>();
+    allBibs.forEach(bib => {
+      if (bib.registrationDate && bib.registrationDate <= cutoffDate && bib.orderRef) {
+        ordersBefore.add(bib.orderRef);
+      }
+    });
+
+    defaultNextBibNumber = ordersBefore.size + 1;
+
+    // Update startBibNumber if it's not manually set
+    if (startBibNumber === null) {
+      setStartBibNumber(defaultNextBibNumber);
+    }
+
+    // Find last bib from orders before cutoff
+    const bibsBeforeCutoff = allBibs.filter(bib =>
+      bib.registrationDate && bib.registrationDate <= cutoffDate
+    );
+    lastPrintedBib = bibsBeforeCutoff.length > 0 ? bibsBeforeCutoff[bibsBeforeCutoff.length - 1] : null;
+
+    // Filter to only new bibs after cutoff
+    const newBibs = allBibs.filter(bib =>
+      bib.registrationDate && bib.registrationDate > cutoffDate
+    );
+    console.log('New bibs after cutoff:', newBibs.length, newBibs.map(b => ({
+      name: `${b.firstName} ${b.lastName}`,
+      date: b.registrationDate
+    })));
+
+    // Renumber the new bibs starting from actualStartNumber
+    // Group by original bib number (which represents each CSV row/team)
+    const actualStartNumber = startBibNumber !== null ? startBibNumber : defaultNextBibNumber;
+    const bibNumberMap = new Map<number, number>();
+    let nextNumber = actualStartNumber;
+
+    // First pass: assign new bib numbers to each unique original bib number
+    newBibs.forEach(bib => {
+      if (!bibNumberMap.has(bib.bibNumber)) {
+        bibNumberMap.set(bib.bibNumber, nextNumber);
+        nextNumber++;
+      }
+    });
+
+    // Second pass: apply the new bib numbers
+    displayBibs = newBibs.map(bib => ({
+      ...bib,
+      bibNumber: bibNumberMap.get(bib.bibNumber) || bib.bibNumber
+    }));
+  }
+
+  // Apply search filter (keeping original indices for selection)
+  const filteredBibsWithIndices = displayBibs
+    .map((bib, index) => ({ bib, originalIndex: allBibs.indexOf(allBibs.find(b => b.orderRef === bib.orderRef && b.firstName === bib.firstName && b.category === bib.category) || allBibs[0]) }))
+    .filter(({ bib }) => {
+      if (!searchTerm.trim()) return true;
+
+      const searchLower = searchTerm.toLowerCase();
+      const firstName = bib.firstName?.toLowerCase() || '';
+      const lastName = bib.lastName?.toLowerCase() || '';
+      const bibNumber = bib.bibNumber?.toString() || '';
+
+      return firstName.includes(searchLower) ||
+             lastName.includes(searchLower) ||
+             bibNumber.includes(searchLower);
+    });
 
   // Load persisted data on mount
   useEffect(() => {
@@ -121,6 +206,7 @@ export default function Home() {
 
           const autoMapping: ColumnMapping = {
             orderRef: findColumnIndex(['Référence commande']),
+            orderDate: findColumnIndex(['Date de la commande']),
             familyName: findColumnIndex(['Nom de famille']),
             adultFirstName: findColumnIndex(['Prénom Adulte 1']),
             childFirstName: findColumnIndex(['Prénom de l\'enfant']),
@@ -160,8 +246,30 @@ export default function Home() {
   };
 
   const handleGenerateBibs = () => {
-    const selectedBibData = allBibs.filter((_, index) => selectedBibs.has(index));
+    const selectedBibData = displayBibs.filter((_, index) => selectedBibs.has(index));
     sessionStorage.setItem('selected-bibs', JSON.stringify(selectedBibData));
+    window.open('/print', '_blank');
+  };
+
+  const handlePrintEmptyTemplates = () => {
+    // Deduplicate by label - only create one empty bib per unique race label
+    const seenLabels = new Set<string>();
+    const uniqueConfigs = raceConfigs.filter(config => {
+      if (seenLabels.has(config.label)) {
+        return false;
+      }
+      seenLabels.add(config.label);
+      return true;
+    });
+
+    const emptyBibs: BibData[] = uniqueConfigs.map(config => ({
+      bibNumber: 0,
+      firstName: '',
+      lastName: '',
+      raceConfig: config,
+      category: config.isParent ? 'adult' : 'child1',
+    }));
+    sessionStorage.setItem('selected-bibs', JSON.stringify(emptyBibs));
     window.open('/print', '_blank');
   };
 
@@ -176,7 +284,7 @@ export default function Home() {
   };
 
   const toggleCategory = (category: string) => {
-    const categoryIndices = allBibs
+    const categoryIndices = displayBibs
       .map((bib, index) => ({ bib, index }))
       .filter(({ bib }) => {
         if (category === 'adults') return bib.category === 'adult';
@@ -200,10 +308,10 @@ export default function Home() {
   };
 
   const toggleAll = () => {
-    if (selectedBibs.size === allBibs.length) {
+    if (selectedBibs.size === displayBibs.length) {
       setSelectedBibs(new Set());
     } else {
-      setSelectedBibs(new Set(allBibs.map((_, index) => index)));
+      setSelectedBibs(new Set(displayBibs.map((_, index) => index)));
     }
   };
 
@@ -254,30 +362,33 @@ export default function Home() {
               Générateur de Dossards
             </h1>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              {canGenerate && (
-                <button
-                  onClick={handleGenerateBibs}
-                  disabled={selectedBibs.size === 0}
-                  style={{
-                    padding: '10px 24px',
-                    fontSize: '14px',
-                    fontWeight: '700',
-                    cursor: selectedBibs.size === 0 ? 'not-allowed' : 'pointer',
-                    background: selectedBibs.size === 0 ? '#cbd5e0' : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    boxShadow: selectedBibs.size === 0 ? 'none' : '0 4px 12px rgba(34, 197, 94, 0.4)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    opacity: selectedBibs.size === 0 ? 0.6 : 1
-                  }}
-                >
-                  <Printer size={16} />
-                  Générer {selectedBibs.size > 0 && `${selectedBibs.size} dossard${selectedBibs.size !== 1 ? 's' : ''}`}
-                </button>
-              )}
+              {canGenerate && (() => {
+                const selectedCount = displayBibs.filter((_, index) => selectedBibs.has(index)).length;
+                return (
+                  <button
+                    onClick={handleGenerateBibs}
+                    disabled={selectedCount === 0}
+                    style={{
+                      padding: '10px 24px',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      cursor: selectedCount === 0 ? 'not-allowed' : 'pointer',
+                      background: selectedCount === 0 ? '#cbd5e0' : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      boxShadow: selectedCount === 0 ? 'none' : '0 4px 12px rgba(34, 197, 94, 0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      opacity: selectedCount === 0 ? 0.6 : 1
+                    }}
+                  >
+                    <Printer size={16} />
+                    Générer {selectedCount > 0 && `${selectedCount} dossard${selectedCount !== 1 ? 's' : ''}`}
+                  </button>
+                );
+              })()}
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={() => setShowConfigMenu(!showConfigMenu)}
@@ -336,12 +447,37 @@ export default function Home() {
                         textDecoration: 'none',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '8px'
+                        gap: '8px',
+                        borderBottom: '1px solid #e2e8f0'
                       }}
                     >
                       <Trophy size={16} />
                       Configuration Courses
                     </a>
+                    <button
+                      onClick={() => {
+                        handlePrintEmptyTemplates();
+                        setShowConfigMenu(false);
+                      }}
+                      style={{
+                        padding: '12px 16px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#4a5568',
+                        textDecoration: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        width: '100%',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <Printer size={16} />
+                      Imprimer Dossards Vides
+                    </button>
                   </div>
                 )}
               </div>
@@ -490,6 +626,7 @@ export default function Home() {
                 <div style={{ background: '#f7fafc', padding: '16px', borderRadius: '8px' }}>
                   {[
                     { key: 'orderRef', label: 'Référence commande', icon: '🔢' },
+                    { key: 'orderDate', label: 'Date de la commande', icon: '📅' },
                     { key: 'familyName', label: 'Nom de famille', icon: '👨‍👩‍👧‍👦' },
                     { key: 'adultFirstName', label: 'Prénom Adulte 1', icon: '👤' },
                     { key: 'childFirstName', label: 'Prénom de l\'enfant', icon: '🧒' },
@@ -583,6 +720,115 @@ export default function Home() {
           {/* Step 3: Select bibs */}
           {step === 3 && (
             <div>
+              {/* Date filter section */}
+              <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f0f9ff', border: '2px solid #bfdbfe', borderRadius: '8px' }}>
+                {mapping.orderDate == null && (
+                  <div style={{ padding: '12px', marginBottom: '12px', backgroundColor: '#fef3c7', border: '2px solid #f59e0b', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '14px', color: '#92400e', fontWeight: '600' }}>
+                      ⚠️ Colonne "Date de la commande" non mappée
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#78350f', marginTop: '4px' }}>
+                      Pour utiliser le filtre par date, retournez à l'étape 2 et mappez la colonne "Date de la commande"
+                    </div>
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
+                  <label style={{ fontWeight: '600', color: '#1e40af', fontSize: '14px' }}>
+                    Afficher uniquement les inscriptions depuis :
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={cutoffDate ? cutoffDate.toISOString().slice(0, 16) : ''}
+                    disabled={mapping.orderDate == null}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setCutoffDate(new Date(e.target.value));
+                        setStartBibNumber(null); // Reset to auto-calculate
+                      } else {
+                        setCutoffDate(null);
+                        setStartBibNumber(null);
+                      }
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      border: '2px solid #3b82f6',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      color: '#1e3a8a',
+                      backgroundColor: mapping.orderDate == null ? '#e2e8f0' : 'white',
+                      cursor: mapping.orderDate == null ? 'not-allowed' : 'text',
+                      opacity: mapping.orderDate == null ? 0.6 : 1
+                    }}
+                  />
+                  {cutoffDate && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setCutoffDate(null);
+                          setStartBibNumber(null);
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          background: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px'
+                        }}
+                      >
+                        Tout afficher
+                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+                        <label style={{ fontWeight: '600', color: '#1e40af', fontSize: '14px', whiteSpace: 'nowrap' }}>
+                          Commencer à :
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={startBibNumber !== null ? startBibNumber : defaultNextBibNumber}
+                          onChange={(e) => setStartBibNumber(parseInt(e.target.value) || 1)}
+                          style={{
+                            padding: '8px 12px',
+                            border: '2px solid #3b82f6',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            color: '#1e3a8a',
+                            backgroundColor: 'white',
+                            width: '80px'
+                          }}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {cutoffDate && (
+                  <div style={{ padding: '12px', backgroundColor: '#dbeafe', borderRadius: '6px', border: '1px solid #93c5fd' }}>
+                    {lastPrintedBib && (
+                      <>
+                        <div style={{ fontSize: '13px', color: '#1e3a8a', marginBottom: '4px', fontWeight: '600' }}>
+                          Dernier dossard imprimé : #{lastPrintedBib.bibNumber} - {lastPrintedBib.firstName} {lastPrintedBib.lastName} ({lastPrintedBib.category})
+                        </div>
+                        {lastPrintedBib.registrationDate && (
+                          <div style={{ fontSize: '12px', color: '#3b82f6' }}>
+                            Inscrit le : {lastPrintedBib.registrationDate.toLocaleDateString('fr-FR')} à {lastPrintedBib.registrationDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        )}
+                        <div style={{ marginTop: '8px', marginBottom: '8px', borderTop: '1px solid #93c5fd' }} />
+                      </>
+                    )}
+                    <div style={{ fontSize: '13px', color: '#059669', fontWeight: '600' }}>
+                      → Prochains dossards commencent à : #{startBibNumber !== null ? startBibNumber : defaultNextBibNumber}
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>
+                      {displayBibs.length} nouveau{displayBibs.length > 1 ? 'x' : ''} dossard{displayBibs.length > 1 ? 's' : ''} à imprimer
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Selection controls */}
               <div style={{ marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <button
@@ -592,7 +838,7 @@ export default function Home() {
                     fontSize: '14px',
                     fontWeight: '600',
                     cursor: 'pointer',
-                    background: selectedBibs.size === allBibs.length ? '#22c55e' : '#667eea',
+                    background: selectedBibs.size === displayBibs.length ? '#22c55e' : '#667eea',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
@@ -602,12 +848,12 @@ export default function Home() {
                   }}
                 >
                   <Check size={16} />
-                  {selectedBibs.size === allBibs.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+                  {selectedBibs.size === displayBibs.length ? 'Tout désélectionner' : 'Tout sélectionner'}
                 </button>
 
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {(() => {
-                    const isAdultsSelected = allBibs
+                    const isAdultsSelected = displayBibs
                       .map((bib, index) => ({ bib, index }))
                       .filter(({ bib }) => bib.category === 'adult')
                       .every(({ index }) => selectedBibs.has(index));
@@ -635,7 +881,7 @@ export default function Home() {
                     );
                   })()}
                   {(() => {
-                    const isChild1Selected = allBibs
+                    const isChild1Selected = displayBibs
                       .map((bib, index) => ({ bib, index }))
                       .filter(({ bib }) => bib.category === 'child1')
                       .every(({ index }) => selectedBibs.has(index));
@@ -663,7 +909,7 @@ export default function Home() {
                     );
                   })()}
                   {(() => {
-                    const isChild2Selected = allBibs
+                    const isChild2Selected = displayBibs
                       .map((bib, index) => ({ bib, index }))
                       .filter(({ bib }) => bib.category === 'child2')
                       .every(({ index }) => selectedBibs.has(index));
@@ -691,7 +937,7 @@ export default function Home() {
                     );
                   })()}
                   {(() => {
-                    const isChild3Selected = allBibs
+                    const isChild3Selected = displayBibs
                       .map((bib, index) => ({ bib, index }))
                       .filter(({ bib }) => bib.category === 'child3')
                       .every(({ index }) => selectedBibs.has(index));
@@ -719,14 +965,47 @@ export default function Home() {
                     );
                   })()}
                 </div>
+
+                {/* Search input on the right */}
+                <div style={{ marginLeft: 'auto' }}>
+                  <div style={{ position: 'relative', width: '300px' }}>
+                    <Search size={16} style={{
+                      position: 'absolute',
+                      left: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#a0aec0'
+                    }} />
+                    <input
+                      type="text"
+                      placeholder="Rechercher..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px 10px 40px',
+                        border: '2px solid #e2e8f0',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        color: '#2d3748',
+                        backgroundColor: 'white',
+                        outline: 'none',
+                        transition: 'border-color 0.2s',
+                        boxSizing: 'border-box'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                      onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Bib list */}
               <div style={{ maxHeight: '500px', overflowY: 'auto', border: '2px solid #f7fafc', borderRadius: '8px' }}>
-                {allBibs.map((bib, index) => (
-                  <div key={index} style={{
+                {filteredBibsWithIndices.map(({ bib, originalIndex }, idx) => (
+                  <div key={`${bib.orderRef}-${bib.firstName}-${bib.category}-${idx}`} style={{
                     borderBottom: '1px solid #e2e8f0',
-                    background: selectedBibs.has(index) ? '#f0f9ff' : 'white',
+                    background: selectedBibs.has(originalIndex) ? '#f0f9ff' : 'white',
                     transition: 'background 0.2s'
                   }}>
                     <div style={{
@@ -735,10 +1014,10 @@ export default function Home() {
                       alignItems: 'center',
                       gap: '12px',
                       cursor: 'pointer'
-                    }} onClick={() => toggleBibSelection(index)}>
+                    }} onClick={() => toggleBibSelection(originalIndex)}>
                       <input
                         type="checkbox"
-                        checked={selectedBibs.has(index)}
+                        checked={selectedBibs.has(originalIndex)}
                         onChange={() => {}} // Handled by onClick
                         style={{
                           width: '18px',

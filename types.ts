@@ -8,6 +8,7 @@ export interface RaceConfig {
 
 export interface ColumnMapping {
   orderRef?: number;
+  orderDate?: number;
   familyName?: number;
   adultFirstName?: number;
   childFirstName?: number;
@@ -26,6 +27,8 @@ export interface BibData {
   lastName: string;
   raceConfig: RaceConfig;
   category?: 'adult' | 'child1' | 'child2' | 'child3';
+  registrationDate?: Date;
+  orderRef?: string;
 }
 
 export interface ParsedRow {

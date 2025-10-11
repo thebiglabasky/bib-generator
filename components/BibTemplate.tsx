@@ -85,7 +85,7 @@ const DEFAULT_TEMPLATE: BibTemplateConfig = {
 function getVariableValue(variable: string, bib: BibData): string {
   switch (variable) {
     case 'bib.number':
-      return bib.bibNumber.toString().padStart(3, '0');
+      return bib.bibNumber === 0 ? '' : bib.bibNumber.toString().padStart(3, '0');
     case 'participant.firstName':
       return bib.firstName;
     case 'participant.lastName':
@@ -104,7 +104,7 @@ function getVariableValue(variable: string, bib: BibData): string {
 
 function replaceTemplateVariables(content: string, bib: BibData): string {
   return content
-    .replace('{bib.number}', bib.bibNumber.toString().padStart(3, '0'))
+    .replace('{bib.number}', bib.bibNumber === 0 ? '' : bib.bibNumber.toString().padStart(3, '0'))
     .replace('{participant.firstName}', bib.firstName)
     .replace('{participant.lastName}', bib.lastName)
     .replace('{race.distance}', bib.raceConfig.label)

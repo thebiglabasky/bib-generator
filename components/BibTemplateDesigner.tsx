@@ -2,8 +2,8 @@
 
 import { extractFontFamilies, loadFont, loadFonts } from '@/lib/font-loader';
 import { useHistory } from '@/lib/use-history';
-import { BibTemplateConfig, TemplateElement } from '@/types';
-import { Download, Eye, EyeOff, Image, Redo, Square, Type, Undo, Upload } from 'lucide-react';
+import { BibData, BibTemplateConfig, RaceConfig, TemplateElement } from '@/types';
+import { Download, Eye, EyeOff, Image, Printer, Redo, Square, Type, Undo, Upload } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Canvas from './designer/Canvas';
 import LayersPanel from './designer/LayersPanel';
@@ -853,6 +853,48 @@ export default function BibTemplateDesigner() {
     fileInputRef.current?.click();
   }, []);
 
+  const handlePrintEmptyTemplates = useCallback(() => {
+    // Get race configs from localStorage or use defaults
+    const DEFAULT_RACE_CONFIGS: RaceConfig[] = [
+      { id: '2016', label: '900m', yearMatch: '2016 et avant', color: '#3baff7', isParent: false },
+      { id: '2017', label: '600m', yearMatch: '2017', color: '#e77f08', isParent: false },
+      { id: '2018', label: '600m', yearMatch: '2018', color: '#e77f0b', isParent: false },
+      { id: '2019', label: '300m', yearMatch: '2019', color: '#26b55b', isParent: false },
+      { id: '2020', label: '300m', yearMatch: '2020', color: '#25b65b', isParent: false },
+      { id: 'parent', label: '2.5km / 5km', yearMatch: 'parent', color: '#7b37cd', isParent: true },
+    ];
+
+    let raceConfigs = DEFAULT_RACE_CONFIGS;
+    const savedConfigs = localStorage.getItem('race-configs');
+    if (savedConfigs) {
+      try {
+        raceConfigs = JSON.parse(savedConfigs);
+      } catch (error) {
+        console.error('Error loading race configs:', error);
+      }
+    }
+
+    // Deduplicate by label - only create one empty bib per unique race label
+    const seenLabels = new Set<string>();
+    const uniqueConfigs = raceConfigs.filter(config => {
+      if (seenLabels.has(config.label)) {
+        return false;
+      }
+      seenLabels.add(config.label);
+      return true;
+    });
+
+    const emptyBibs: BibData[] = uniqueConfigs.map(config => ({
+      bibNumber: 0,
+      firstName: '',
+      lastName: '',
+      raceConfig: config,
+      category: config.isParent ? 'adult' : 'child1',
+    }));
+    sessionStorage.setItem('selected-bibs', JSON.stringify(emptyBibs));
+    window.open('/print', '_blank');
+  }, []);
+
   // Don't render until we've loaded from localStorage
   if (!isLoaded) {
     return null;
@@ -919,6 +961,25 @@ export default function BibTemplateDesigner() {
             >
               {showPreview ? <EyeOff size={18} /> : <Eye size={18} />}
               {showPreview ? 'Masquer la prévisualisation' : 'Prévisualiser'}
+            </button>
+            <button
+              onClick={handlePrintEmptyTemplates}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 16px',
+                background: '#22c55e',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              <Printer size={18} />
+              Imprimer Dossards Vides
             </button>
             <input
               ref={fileInputRef}
