@@ -1,0 +1,14 @@
+{
+  "name": "bib-generator-checks",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "checkly:preview": "checkly deploy --preview",
+    "checkly:deploy": "checkly deploy"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "checkly": "^8.9.0",
+    "typescript": "^5.9.3"
+  }
+}
