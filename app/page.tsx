@@ -1096,6 +1096,9 @@ export default function Home() {
             </div>
           )}
         </div>
+        <div style={{ textAlign: 'center', marginTop: '24px', color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>
+          Hervé
+        </div>
       </div>
     </div>
   );
