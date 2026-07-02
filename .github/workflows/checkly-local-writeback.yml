@@ -1,0 +1,55 @@
+name: Checkly local writeback
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checkly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout app
+        uses: actions/checkout@v4
+
+      - name: Checkout Checkly CLI metadata branch
+        uses: actions/checkout@v4
+        with:
+          repository: checkly/checkly-cli
+          ref: herve/github-test-session-metadata
+          path: checkly-cli
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Pack Checkly CLI metadata branch
+        working-directory: checkly-cli
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir packages/cli pack
+
+      - name: Start detached Checkly test session
+        uses: checkly/checkly-action@herve/github-test-session-metadata
+        with:
+          command: test
+          cli-version: file:./checkly-cli/packages/cli/checkly-0.0.1-dev.tgz
+          install-command: pnpm install --frozen-lockfile
+          github-report: true
+          env: |
+            BIB_GENERATOR_BASE_URL=https://bib-generator.vercel.app
+        env:
+          CHECKLY_ENV: local
+          CHECKLY_API_URL: https://pulpiest-unserviced-tatum.ngrok-free.dev
+          CHECKLY_ACCOUNT_ID: ${{ vars.CHECKLY_ACCOUNT_ID }}
+          CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
