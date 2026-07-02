@@ -44,7 +44,9 @@ jobs:
         with:
           command: test
           cli-version: file:./checkly-cli/packages/cli/checkly-0.0.1-dev.tgz
-          install-command: pnpm install --frozen-lockfile
+          install-command: |
+            pnpm install --frozen-lockfile
+            pnpm add --save-dev ./checkly-cli/packages/cli/checkly-0.0.1-dev.tgz
           github-report: true
           env: |
             BIB_GENERATOR_BASE_URL=https://bib-generator.vercel.app
