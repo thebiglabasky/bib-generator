@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import path from 'node:path'
+import * as path from 'node:path'
 
 function getTargetUrl(pathname = '/') {
   const baseUrl = process.env.ENVIRONMENT_URL || process.env.BIB_GENERATOR_BASE_URL
@@ -22,7 +22,7 @@ test('imports the sample CSV and prepares bib selection', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Générateur de Dossards' })).toBeVisible()
 
   await page.locator('input[type="file"][accept=".csv"]').setInputFiles(
-    path.join(process.cwd(), 'resources/course-nettoye.csv'),
+    path.join(__dirname, 'resources/course-nettoye.csv'),
   )
 
   await expect(page.getByText('Sélection')).toBeVisible()
