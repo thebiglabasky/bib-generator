@@ -1,0 +1,76 @@
+name: Checkly trigger scenarios
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: Scenario to run
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - app-installed-report-on
+          - app-unavailable-report-on
+          - report-off
+      checkly-api-url:
+        description: Checkly API URL, e.g. the current ngrok URL for local backend testing
+        required: false
+        default: https://pulpiest-unserviced-tatum.ngrok-free.dev
+      app-base-url:
+        description: Target application URL for the deployed checks
+        required: false
+        default: https://bib-generator.vercel.app
+
+permissions:
+  contents: read
+
+jobs:
+  trigger:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scenario: app-installed-report-on
+            name: App installed, GitHub reporting on
+            github-report: "true"
+            forced-report-available: ""
+            forced-report-reason: ""
+          - scenario: app-unavailable-report-on
+            name: App unavailable (forced), GitHub reporting on
+            github-report: "true"
+            forced-report-available: "false"
+            forced-report-reason: "github_app_not_connected"
+          - scenario: report-off
+            name: GitHub reporting off
+            github-report: "false"
+            forced-report-available: ""
+            forced-report-reason: ""
+
+    steps:
+      - name: Checkout app
+        if: ${{ github.event_name == 'pull_request' || github.event.inputs.scenario == 'all' || github.event.inputs.scenario == matrix.scenario }}
+        uses: actions/checkout@v4
+
+      - name: Trigger Checkly test session
+        if: ${{ github.event_name == 'pull_request' || github.event.inputs.scenario == 'all' || github.event.inputs.scenario == matrix.scenario }}
+        uses: checkly/checkly-action@herve/github-test-session-metadata
+        with:
+          command: trigger
+          cli-version: 0.0.0-canary.58c867e
+          tags: bib-generator
+          location: eu-west-3
+          github-report: ${{ matrix.github-report }}
+          env: |
+            BIB_GENERATOR_BASE_URL=${{ github.event.inputs.app-base-url || 'https://bib-generator.vercel.app' }}
+        env:
+          CHECKLY_API_URL: ${{ github.event.inputs.checkly-api-url || 'https://pulpiest-unserviced-tatum.ngrok-free.dev' }}
+          CHECKLY_ACCOUNT_ID: ${{ vars.CHECKLY_ACCOUNT_ID }}
+          CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
+          CHECKLY_ACTION_GITHUB_REPORT_AVAILABLE: ${{ matrix.forced-report-available }}
+          CHECKLY_ACTION_GITHUB_REPORT_REASON: ${{ matrix.forced-report-reason }}
