@@ -5,7 +5,8 @@ import { Frequency } from 'checkly/constructs'
  * See https://www.checklyhq.com/docs/cli/project-structure/
  */
 const config = defineConfig({
-  projectName: 'bib-generator',
+  projectName: 'Bib Generator',
+  repoUrl: 'https://github.com/thebiglabasky/bib-generator',
   logicalId: 'bib-generator',
   checks: {
     activated: true,
