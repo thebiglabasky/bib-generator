@@ -1,0 +1,61 @@
+name: Checkly local feedback loop
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      checkly-api-url:
+        description: Checkly API URL, e.g. the current ngrok URL for local backend testing
+        required: false
+        default: https://pulpiest-unserviced-tatum.ngrok-free.dev
+      app-base-url:
+        description: Target application URL for the deployed checks
+        required: false
+        default: https://bib-generator.vercel.app
+
+permissions:
+  contents: read
+
+jobs:
+  trigger:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: App installed, GitHub reporting on
+            github-report: "true"
+            forced-report-available: ""
+            forced-report-reason: ""
+          - name: App unavailable (forced), GitHub reporting on
+            github-report: "true"
+            forced-report-available: "false"
+            forced-report-reason: "github_app_not_connected"
+          - name: GitHub reporting off
+            github-report: "false"
+            forced-report-available: ""
+            forced-report-reason: ""
+
+    steps:
+      - name: Checkout app
+        uses: actions/checkout@v4
+
+      - name: Trigger Checkly test session
+        uses: checkly/checkly-action@main
+        with:
+          command: trigger
+          cli-version: 8.12.0
+          tags: bib-generator
+          location: eu-west-3
+          github-report: ${{ matrix.github-report }}
+          env: |
+            BIB_GENERATOR_BASE_URL=${{ github.event.inputs['app-base-url'] || 'https://bib-generator.vercel.app' }}
+        env:
+          CHECKLY_API_URL: ${{ github.event.inputs['checkly-api-url'] || 'https://pulpiest-unserviced-tatum.ngrok-free.dev' }}
+          CHECKLY_ACCOUNT_ID: ${{ vars.CHECKLY_ACCOUNT_ID }}
+          CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
+          CHECKLY_ACTION_GITHUB_REPORT_AVAILABLE: ${{ matrix.forced-report-available }}
+          CHECKLY_ACTION_GITHUB_REPORT_REASON: ${{ matrix.forced-report-reason }}
