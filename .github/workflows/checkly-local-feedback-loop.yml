@@ -54,6 +54,7 @@ jobs:
           env: |
             BIB_GENERATOR_BASE_URL=${{ github.event.inputs['app-base-url'] || 'https://bib-generator.vercel.app' }}
         env:
+          CHECKLY_ENV: local
           CHECKLY_API_URL: ${{ github.event.inputs['checkly-api-url'] || 'https://pulpiest-unserviced-tatum.ngrok-free.dev' }}
           CHECKLY_ACCOUNT_ID: ${{ vars.CHECKLY_ACCOUNT_ID }}
           CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
