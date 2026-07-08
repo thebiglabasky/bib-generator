@@ -2,13 +2,13 @@ import { BrowserCheck, Frequency, UrlAssertionBuilder, UrlMonitor } from 'checkl
 import type { Region } from 'checkly'
 
 const baseUrl = '{{BIB_GENERATOR_BASE_URL}}'
-const primaryLocations: Array<keyof Region> = ['eu-west-3', 'eu-central-1', 'us-east-1']
+const primaryLocations: Array<keyof Region> = ['us-east-1', 'eu-west-2', 'ap-southeast-1']
 
 new UrlMonitor('bib-generator-homepage-url', {
   name: 'Bib Generator homepage',
-  frequency: Frequency.EVERY_10M,
+  frequency: Frequency.EVERY_5M,
   locations: primaryLocations,
-  tags: ['bib-generator', 'nextjs', 'route'],
+  tags: ['bib-generator', 'nextjs', 'route', 'uptime'],
   degradedResponseTime: 3000,
   maxResponseTime: 10000,
   request: {
@@ -57,9 +57,9 @@ new BrowserCheck('bib-generator-csv-workflow', {
   code: {
     entrypoint: './csv-import.spec.ts',
   },
-  frequency: Frequency.EVERY_30M,
-  locations: ['eu-west-3', 'us-east-1'],
-  tags: ['bib-generator', 'csv', 'browser'],
+  frequency: Frequency.EVERY_5M,
+  locations: primaryLocations,
+  tags: ['bib-generator', 'csv', 'browser', 'functionality'],
 })
 
 new BrowserCheck('bib-generator-template-designer-workflow', {
@@ -68,6 +68,6 @@ new BrowserCheck('bib-generator-template-designer-workflow', {
     entrypoint: './template-designer.spec.ts',
   },
   frequency: Frequency.EVERY_1H,
-  locations: ['eu-west-3', 'us-east-1'],
+  locations: ['us-east-1', 'eu-west-2'],
   tags: ['bib-generator', 'template-designer', 'browser'],
 })

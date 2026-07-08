@@ -9,10 +9,10 @@ const config = defineConfig({
   repoUrl: 'https://github.com/thebiglabasky/bib-generator',
   logicalId: 'bib-generator',
   checks: {
-    activated: true,
+    activate: true,
     muted: false,
     frequency: Frequency.EVERY_10M,
-    locations: ['eu-west-3', 'eu-central-1', 'us-east-1'],
+    locations: ['us-east-1', 'eu-west-2', 'ap-southeast-1'],
     runtimeId: '2025.04',
     checkMatch: '**/__checks__/**/*.check.ts',
     ignoreDirectoriesMatch: ['node_modules/**', '.next/**'],
@@ -28,7 +28,7 @@ const config = defineConfig({
     },
   },
   cli: {
-    runLocation: 'eu-west-3',
+    runLocation: 'eu-west-2',
     reporters: ['list'],
     retries: 0,
   },
