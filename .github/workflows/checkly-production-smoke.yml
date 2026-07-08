@@ -1,0 +1,31 @@
+name: Checkly production smoke
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trigger:
+    name: Trigger deployed Checkly checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Trigger Checkly test session
+        uses: checkly/checkly-action@v0.0.1
+        env:
+          CHECKLY_ACCOUNT_ID: ${{ vars.CHECKLY_ACCOUNT_ID }}
+          CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
+        with:
+          command: trigger
+          cli-version: 8.12.0
+          tags: route
+          location: eu-west-3
+          test-session-name: GitHub Action production smoke
+          github-report: "true"
+          env: |
+            BIB_GENERATOR_BASE_URL=https://bib-generator.vercel.app
