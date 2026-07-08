@@ -1,0 +1,31 @@
+name: Checkly PR code checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checkly:
+    name: Run Checkly checks from this PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PR code
+        uses: actions/checkout@v4
+
+      - name: Run Checkly
+        uses: checkly/checkly-action@v0.0.1
+        env:
+          CHECKLY_ACCOUNT_ID: ${{ vars.CHECKLY_ACCOUNT_ID }}
+          CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
+        with:
+          command: test
+          cli-version: 8.12.0
+          install-command: npm install -g pnpm@10 && pnpm install --frozen-lockfile
+          location: eu-west-3
+          test-session-name: Checkly PR code checks
+          github-report: "true"
+          env: |
+            BIB_GENERATOR_BASE_URL=https://bib-generator.vercel.app
