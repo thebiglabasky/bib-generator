@@ -1,0 +1,44 @@
+name: Checkly PR demo
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checkly-pr-demo-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checkly:
+    name: Schedule Checkly PR tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the tested commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Run Checkly from this PR
+        uses: checkly/checkly-action@0ee0d77d4bf3f79429496276c5b43ab21f24bbb1
+        env:
+          CHECKLY_ACCOUNT_ID: ${{ vars.CHECKLY_ACCOUNT_ID }}
+          CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
+        with:
+          command: test
+          cli-version: 0.0.0-canary.9a1ea9d
+          reporting: github-check
+          github-check-name: Checkly PR code checks
+          install-command: npm install -g pnpm@10 && pnpm install --frozen-lockfile
+          location: eu-west-3
+          test-session-name: Checkly PR code checks
+          env: |
+            BIB_GENERATOR_BASE_URL=https://bib-generator.vercel.app
