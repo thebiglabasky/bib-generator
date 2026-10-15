@@ -1,4 +1,4 @@
-import { BrowserCheck, Frequency, UrlAssertionBuilder, UrlMonitor } from 'checkly/constructs'
+import { BrowserCheck, Frequency, RetryStrategyBuilder, UrlAssertionBuilder, UrlMonitor } from 'checkly/constructs'
 import type { Region } from 'checkly'
 
 const baseUrl = '{{BIB_GENERATOR_BASE_URL}}'
@@ -60,6 +60,18 @@ new BrowserCheck('bib-generator-csv-workflow', {
   frequency: Frequency.EVERY_30M,
   locations: ['eu-west-3', 'us-east-1'],
   tags: ['bib-generator', 'csv', 'browser'],
+  activated: false,
+  muted: false,
+  shouldFail: false,
+  runParallel: false,
+  runtimeId: '2025.04',
+  environmentVariables: [],
+  retryStrategy: RetryStrategyBuilder.fixedStrategy({
+    baseBackoffSeconds: 0,
+    maxRetries: 1,
+    maxDurationSeconds: 600,
+    sameRegion: false,
+  }),
 })
 
 new BrowserCheck('bib-generator-template-designer-workflow', {
